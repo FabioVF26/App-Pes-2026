@@ -30,6 +30,7 @@ data class NonConformita(
     val verificaId: Long,
     val descrizione: String = "",
     val azioneRichiesta: String = "",
+    @ColumnInfo(defaultValue = "''") val sanzionePossibile: String = "",
     val priorita: String = "MEDIA",
     val stato: String = "APERTA",
     val termineEpochMillis: Long? = null,

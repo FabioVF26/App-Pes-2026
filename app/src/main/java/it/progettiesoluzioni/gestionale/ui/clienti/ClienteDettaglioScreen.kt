@@ -110,6 +110,39 @@ fun ClienteDettaglioScreen(
         }
 
         item {
+            cliente?.let { c ->
+                if (c.servizioHaccp || c.servizioSicurezza) {
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE9EDF7)),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.Assignment, contentDescription = null, tint = BrandNavy)
+                                Text("Avvia sopralluogo", style = MaterialTheme.typography.titleMedium, color = BrandNavy)
+                            }
+                            Text(
+                                "Accesso rapido al sopralluogo del cliente selezionato.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (c.servizioHaccp) {
+                                Button(modifier = Modifier.fillMaxWidth(), onClick = onNuovoSopralluogoHaccp) {
+                                    Text("Sopralluogo HACCP")
+                                }
+                            }
+                            if (c.servizioSicurezza) {
+                                Button(modifier = Modifier.fillMaxWidth(), onClick = onNuovoSopralluogoSicurezza) {
+                                    Text("Sopralluogo Sicurezza")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -160,38 +193,6 @@ fun ClienteDettaglioScreen(
             }
         }
 
-        item {
-            Card(
-                Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE9EDF7)),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.Assignment, contentDescription = null, tint = BrandNavy)
-                    Text("Sopralluoghi", style = MaterialTheme.typography.titleMedium, color = BrandNavy)
-                    Text(
-                        "Avvia un sopralluogo HACCP o Sicurezza collegato al cliente e alla sede, con checklist, note, non conformità e relazione PDF.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (cliente?.servizioHaccp == true) {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onNuovoSopralluogoHaccp
-                        ) {
-                            Text("Avvia sopralluogo HACCP")
-                        }
-                    }
-                    if (cliente?.servizioSicurezza == true) {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onNuovoSopralluogoSicurezza
-                        ) {
-                            Text("Avvia sopralluogo Sicurezza")
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

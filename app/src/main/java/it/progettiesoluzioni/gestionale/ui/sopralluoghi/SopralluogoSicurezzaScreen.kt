@@ -296,6 +296,7 @@ private fun NonConformitaEditor(
     val context = LocalContext.current
     var descrizione by rememberSaveable(verifica.id, "descrizione") { mutableStateOf(valore?.descrizione ?: "") }
     var azione by rememberSaveable(verifica.id, "azione") { mutableStateOf(valore?.azioneRichiesta ?: "") }
+    var sanzionePossibile by rememberSaveable(verifica.id, "sanzione") { mutableStateOf(valore?.sanzionePossibile ?: SanzioniSicurezza.proposta(verifica.codice)) }
     var priorita by rememberSaveable(verifica.id, "priorita") { mutableStateOf(valore?.priorita ?: "MEDIA") }
     var stato by rememberSaveable(verifica.id, "stato") { mutableStateOf(valore?.stato ?: "APERTA") }
     var termine by rememberSaveable(verifica.id, "termine") { mutableStateOf(valore?.termineEpochMillis) }
@@ -316,6 +317,7 @@ private fun NonConformitaEditor(
                 verificaId = verifica.id,
                 descrizione = descrizione,
                 azioneRichiesta = azione,
+                sanzionePossibile = sanzionePossibile,
                 priorita = priorita,
                 stato = stato,
                 termineEpochMillis = termine,
@@ -348,6 +350,7 @@ private fun NonConformitaEditor(
         if (valore != null) {
             descrizione = valore.descrizione
             azione = valore.azioneRichiesta
+            sanzionePossibile = valore.sanzionePossibile.ifBlank { SanzioniSicurezza.proposta(verifica.codice) }
             priorita = valore.priorita
             stato = valore.stato
             termine = valore.termineEpochMillis
@@ -384,6 +387,16 @@ private fun NonConformitaEditor(
                 label = { Text("Azione correttiva richiesta") },
                 readOnly = readOnly,
                 minLines = 2
+            )
+
+            OutlinedTextField(
+                value = sanzionePossibile,
+                onValueChange = { sanzionePossibile = it; salva() },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Possibile sanzione (indicativa)") },
+                supportingText = { Text("Proposta automatica da verificare sulla fattispecie concreta e sulla norma vigente.") },
+                readOnly = readOnly,
+                minLines = 3
             )
 
             Text("Priorità", style = MaterialTheme.typography.bodyMedium)

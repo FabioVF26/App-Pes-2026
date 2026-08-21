@@ -14,7 +14,7 @@ import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 
 @Database(
     entities = [Cliente::class, Sede::class, Sopralluogo::class, VerificaSopralluogo::class, NonConformita::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -79,12 +79,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE non_conformita ADD COLUMN sanzionePossibile TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 "ps_gestionale.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
                 .also { INSTANCE = it }
         }
