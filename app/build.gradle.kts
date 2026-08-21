@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "it.progettiesoluzioni.gestionale"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "it.progettiesoluzioni.gestionale"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
 
