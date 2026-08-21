@@ -10,6 +10,7 @@ import it.progettiesoluzioni.gestionale.data.model.Sede
 import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import it.progettiesoluzioni.gestionale.data.repository.GestionaleRepository
+import it.progettiesoluzioni.gestionale.data.repository.MasterClientiSeed
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,6 +21,17 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
     val clienti = repository.clienti.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val numeroClienti = repository.numeroClienti.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val sopralluoghi = repository.sopralluoghi().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        val prefs = application.getSharedPreferences("ps_gestionale_prefs", 0)
+        val chiaveImport = "master_clienti_${MasterClientiSeed.versione}"
+        if (!prefs.getBoolean(chiaveImport, false)) {
+            viewModelScope.launch {
+                repository.importaMasterClienti()
+                prefs.edit().putBoolean(chiaveImport, true).apply()
+            }
+        }
+    }
 
     fun cliente(id: Long) = repository.cliente(id)
     fun sedi(clienteId: Long) = repository.sedi(clienteId)

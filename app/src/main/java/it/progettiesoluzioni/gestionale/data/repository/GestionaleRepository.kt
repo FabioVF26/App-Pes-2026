@@ -32,6 +32,61 @@ class GestionaleRepository(private val db: AppDatabase) {
     suspend fun aggiornaSede(sede: Sede) = db.sedeDao().aggiorna(sede)
     suspend fun eliminaSede(sede: Sede) = db.sedeDao().elimina(sede)
 
+    suspend fun importaMasterClienti(): Pair<Int, Int> = db.withTransaction {
+        var clientiInseriti = 0
+        var sediInserite = 0
+
+        MasterClientiSeed.clienti.forEach { seed ->
+            var clienteId = db.clienteDao().trovaIdPerRagioneSociale(seed.ragioneSociale)
+            if (clienteId == null) {
+                clienteId = db.clienteDao().inserisci(
+                    Cliente(
+                        ragioneSociale = seed.ragioneSociale,
+                        attivita = seed.attivita,
+                        legaleRappresentante = seed.referente,
+                        telefono = seed.telefono,
+                        note = seed.note,
+                        servizioHaccp = seed.servizioHaccp,
+                        servizioSicurezza = seed.servizioSicurezza,
+                        servizioGdpr = seed.servizioGdpr
+                    )
+                )
+                clientiInseriti++
+            } else {
+                val esistente = db.clienteDao().clientePerId(clienteId)
+                if (esistente != null) {
+                    val aggiornato = esistente.copy(
+                        attivita = esistente.attivita.ifBlank { seed.attivita },
+                        legaleRappresentante = esistente.legaleRappresentante.ifBlank { seed.referente },
+                        telefono = esistente.telefono.ifBlank { seed.telefono },
+                        note = esistente.note.ifBlank { seed.note },
+                        servizioHaccp = esistente.servizioHaccp || seed.servizioHaccp,
+                        servizioSicurezza = esistente.servizioSicurezza || seed.servizioSicurezza,
+                        servizioGdpr = esistente.servizioGdpr || seed.servizioGdpr
+                    )
+                    if (aggiornato != esistente) db.clienteDao().aggiorna(aggiornato)
+                }
+            }
+
+            seed.sedi.forEach { sedeSeed ->
+                val sedeEsistente = db.sedeDao().trovaIdPerIndirizzo(clienteId, sedeSeed.indirizzo)
+                if (sedeEsistente == null) {
+                    db.sedeDao().inserisci(
+                        Sede(
+                            clienteId = clienteId,
+                            nome = sedeSeed.nome,
+                            indirizzo = sedeSeed.indirizzo,
+                            note = if (sedeSeed.zona.isBlank()) "" else "Zona: ${sedeSeed.zona}",
+                            principale = sedeSeed.principale
+                        )
+                    )
+                    sediInserite++
+                }
+            }
+        }
+        clientiInseriti to sediInserite
+    }
+
     suspend fun creaSopralluogoHaccp(clienteId: Long, sedeId: Long, note: String): Long = db.withTransaction {
         val id = db.sopralluogoDao().inserisci(
             Sopralluogo(

@@ -41,3 +41,11 @@ Artifact: `PS-Gestionale-v0.4-debug`
 - generazione PDF del sopralluogo
 - checklist Sicurezza D.Lgs. 81/2008
 - checklist GDPR
+
+## Versione 0.4.1 - popolamento Master Clienti
+- Importazione automatica una tantum del Master Lavori PES del 17/08/2026.
+- 150 righe sorgente consolidate in 146 clienti unici.
+- Le ragioni sociali duplicate vengono gestite come cliente unico con più sedi quando gli indirizzi differiscono.
+- 149 sedi/record sede dopo eliminazione della duplicazione identica di Fata SRL.
+- Servizi HACCP, Sicurezza 81/08 e GDPR importati dal master.
+- Dati mancanti lasciati vuoti senza ricostruzioni automatiche.

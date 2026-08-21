@@ -21,4 +21,7 @@ interface SedeDao {
 
     @Query("SELECT * FROM sedi WHERE clienteId = :clienteId ORDER BY principale DESC, nome ASC")
     fun osservaSedi(clienteId: Long): Flow<List<Sede>>
+
+    @Query("SELECT id FROM sedi WHERE clienteId = :clienteId AND indirizzo = :indirizzo COLLATE NOCASE LIMIT 1")
+    suspend fun trovaIdPerIndirizzo(clienteId: Long, indirizzo: String): Long?
 }

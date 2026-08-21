@@ -27,4 +27,10 @@ interface ClienteDao {
 
     @Query("SELECT COUNT(*) FROM clienti WHERE attivo = 1")
     fun contaClientiAttivi(): Flow<Int>
+
+    @Query("SELECT id FROM clienti WHERE ragioneSociale = :ragioneSociale COLLATE NOCASE LIMIT 1")
+    suspend fun trovaIdPerRagioneSociale(ragioneSociale: String): Long?
+
+    @Query("SELECT * FROM clienti WHERE id = :id LIMIT 1")
+    suspend fun clientePerId(id: Long): Cliente?
 }
