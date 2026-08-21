@@ -66,6 +66,7 @@ fun SopralluogoSicurezzaScreen(
     val nonConformita by viewModel.nonConformita(sopralluogoId).collectAsStateWithLifecycle(initialValue = emptyList())
     var messaggio by remember { mutableStateOf<String?>(null) }
     var mostraConfermaChiusura by remember { mutableStateOf(false) }
+    var mostraConfermaEliminazione by remember { mutableStateOf(false) }
 
     val ncMap = nonConformita.associateBy { it.verificaId }
     val complete = verifiche.count { it.esito != "DA_VERIFICARE" }
@@ -150,10 +151,40 @@ fun SopralluogoSicurezzaScreen(
         }
 
         item {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { mostraConfermaEliminazione = true }
+            ) {
+                Text("Elimina sopralluogo", color = MaterialTheme.colorScheme.error)
+            }
+        }
+
+        item {
             OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onBack) {
                 Text("Torna all'elenco")
             }
         }
+    }
+
+    if (mostraConfermaEliminazione) {
+        AlertDialog(
+            onDismissRequest = { mostraConfermaEliminazione = false },
+            title = { Text("Eliminare il sopralluogo?") },
+            text = {
+                Text("L'eliminazione è definitiva e rimuove anche verifiche, non conformità e fotografie collegate al sopralluogo.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        mostraConfermaEliminazione = false
+                        viewModel.eliminaSopralluogo(sopralluogoId) { onBack() }
+                    }
+                ) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostraConfermaEliminazione = false }) { Text("Annulla") }
+            }
+        )
     }
 
     if (mostraConfermaChiusura) {
@@ -296,7 +327,7 @@ private fun NonConformitaEditor(
     val context = LocalContext.current
     var descrizione by rememberSaveable(verifica.id, "descrizione") { mutableStateOf(valore?.descrizione ?: "") }
     var azione by rememberSaveable(verifica.id, "azione") { mutableStateOf(valore?.azioneRichiesta ?: "") }
-    var sanzionePossibile by rememberSaveable(verifica.id, "sanzione") { mutableStateOf(valore?.sanzionePossibile ?: SanzioniSicurezza.proposta(verifica.codice)) }
+    var sanzionePossibile by rememberSaveable(verifica.id, "sanzione") { mutableStateOf(valore?.sanzionePossibile?.takeIf { it.isNotBlank() } ?: SanzioniSicurezza.proposta(verifica.codice)) }
     var priorita by rememberSaveable(verifica.id, "priorita") { mutableStateOf(valore?.priorita ?: "MEDIA") }
     var stato by rememberSaveable(verifica.id, "stato") { mutableStateOf(valore?.stato ?: "APERTA") }
     var termine by rememberSaveable(verifica.id, "termine") { mutableStateOf(valore?.termineEpochMillis) }
@@ -350,7 +381,11 @@ private fun NonConformitaEditor(
         if (valore != null) {
             descrizione = valore.descrizione
             azione = valore.azioneRichiesta
-            sanzionePossibile = valore.sanzionePossibile.ifBlank { SanzioniSicurezza.proposta(verifica.codice) }
+            val propostaAutomatica = SanzioniSicurezza.proposta(verifica.codice)
+            sanzionePossibile = valore.sanzionePossibile.ifBlank { propostaAutomatica }
+            if (valore.sanzionePossibile.isBlank() && propostaAutomatica.isNotBlank() && !readOnly) {
+                onSave(valore.copy(sanzionePossibile = propostaAutomatica))
+            }
             priorita = valore.priorita
             stato = valore.stato
             termine = valore.termineEpochMillis

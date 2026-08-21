@@ -30,8 +30,12 @@ import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
 import it.progettiesoluzioni.gestionale.ui.clienti.ModificaClienteScreen
 import it.progettiesoluzioni.gestionale.ui.clienti.NuovaSedeScreen
 import it.progettiesoluzioni.gestionale.ui.clienti.NuovoClienteScreen
-import it.progettiesoluzioni.gestionale.ui.common.PlaceholderScreen
 import it.progettiesoluzioni.gestionale.ui.dashboard.DashboardScreen
+import it.progettiesoluzioni.gestionale.ui.scadenze.ScadenzeScreen
+import it.progettiesoluzioni.gestionale.ui.scadenze.NuovaAttivitaScreen
+import it.progettiesoluzioni.gestionale.ui.documenti.DocumentiScreen
+import it.progettiesoluzioni.gestionale.ui.documenti.NuovoDocumentoScreen
+import it.progettiesoluzioni.gestionale.ui.servizi.ServizioClienteScreen
 import it.progettiesoluzioni.gestionale.ui.sopralluoghi.NuovoSopralluogoHaccpScreen
 import it.progettiesoluzioni.gestionale.ui.sopralluoghi.NuovoSopralluogoSicurezzaScreen
 import it.progettiesoluzioni.gestionale.ui.sopralluoghi.SopralluoghiScreen
@@ -108,7 +112,12 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                     onModificaCliente = { navController.navigate("modificaCliente/$id") },
                     onAggiungiSede = { navController.navigate("nuovaSede/$id") },
                     onNuovoSopralluogoHaccp = { navController.navigate("nuovoSopralluogoHaccp/$id") },
-                    onNuovoSopralluogoSicurezza = { navController.navigate("nuovoSopralluogoSicurezza/$id") }
+                    onNuovoSopralluogoSicurezza = { navController.navigate("nuovoSopralluogoSicurezza/$id") },
+                    onApriSopralluogo = { sopralluogoId, tipo ->
+                        if (tipo == "SICUREZZA") navController.navigate("sopralluogoSicurezza/$sopralluogoId")
+                        else navController.navigate("sopralluogoHaccp/$sopralluogoId")
+                    },
+                    onApriServizio = { tipo -> navController.navigate("servizio/$id/$tipo") }
                 )
             }
             composable("modificaCliente/{clienteId}") { entry ->
@@ -126,7 +135,8 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 val id = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
                 NuovaSedeScreen(id, viewModel) { navController.popBackStack() }
             }
-            composable("scadenze") { PlaceholderScreen("Scadenze", "Modulo predisposto per la prossima fase.") }
+            composable("scadenze") { ScadenzeScreen(viewModel, onNuova = { navController.navigate("nuovaAttivita") }) }
+            composable("nuovaAttivita") { NuovaAttivitaScreen(viewModel) { navController.popBackStack() } }
             composable("sopralluoghi") {
                 SopralluoghiScreen(
                     viewModel = viewModel,
@@ -172,7 +182,13 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 SopralluogoSicurezzaScreen(id, viewModel) { navController.popBackStack() }
             }
 
-            composable("documenti") { PlaceholderScreen("Documenti", "Archivio documentale previsto nelle prossime versioni.") }
+            composable("documenti") { DocumentiScreen(viewModel, onNuovo = { navController.navigate("nuovoDocumento") }) }
+            composable("nuovoDocumento") { NuovoDocumentoScreen(viewModel) { navController.popBackStack() } }
+            composable("servizio/{clienteId}/{tipo}") { entry ->
+                val clienteId = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
+                val tipo = entry.arguments?.getString("tipo") ?: return@composable
+                ServizioClienteScreen(clienteId, tipo, viewModel)
+            }
         }
     }
 }

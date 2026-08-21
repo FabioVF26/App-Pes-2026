@@ -33,4 +33,7 @@ interface ClienteDao {
 
     @Query("SELECT * FROM clienti WHERE id = :id LIMIT 1")
     suspend fun clientePerId(id: Long): Cliente?
+
+    @Query("SELECT * FROM clienti ORDER BY ragioneSociale ASC")
+    suspend fun tuttiSnapshot(): List<Cliente>
 }

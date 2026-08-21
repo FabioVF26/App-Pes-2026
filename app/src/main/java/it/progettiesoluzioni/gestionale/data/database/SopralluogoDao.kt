@@ -23,4 +23,10 @@ interface SopralluogoDao {
 
     @Query("SELECT * FROM sopralluoghi WHERE id = :id LIMIT 1")
     fun osserva(id: Long): Flow<Sopralluogo?>
+
+    @Query("DELETE FROM sopralluoghi WHERE id = :id")
+    suspend fun eliminaPerId(id: Long)
+
+    @Query("SELECT * FROM sopralluoghi ORDER BY dataOraEpochMillis DESC")
+    suspend fun tuttiSnapshot(): List<Sopralluogo>
 }

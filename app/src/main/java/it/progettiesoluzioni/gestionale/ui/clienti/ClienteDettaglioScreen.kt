@@ -17,24 +17,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 import it.progettiesoluzioni.gestionale.ui.theme.GdprContainer
 import it.progettiesoluzioni.gestionale.ui.theme.GdprPurple
@@ -42,6 +51,9 @@ import it.progettiesoluzioni.gestionale.ui.theme.HaccpContainer
 import it.progettiesoluzioni.gestionale.ui.theme.HaccpGreen
 import it.progettiesoluzioni.gestionale.ui.theme.SafetyContainer
 import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ClienteDettaglioScreen(
@@ -50,11 +62,17 @@ fun ClienteDettaglioScreen(
     onModificaCliente: () -> Unit,
     onAggiungiSede: () -> Unit,
     onNuovoSopralluogoHaccp: () -> Unit,
-    onNuovoSopralluogoSicurezza: () -> Unit
+    onNuovoSopralluogoSicurezza: () -> Unit,
+    onApriSopralluogo: (Long, String) -> Unit,
+    onApriServizio: (String) -> Unit
 ) {
     val cliente by viewModel.cliente(clienteId).collectAsStateWithLifecycle(initialValue = null)
     val sedi by viewModel.sedi(clienteId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val sopralluoghi by viewModel.sopralluoghiCliente(clienteId).collectAsStateWithLifecycle(initialValue = emptyList())
     val context = LocalContext.current
+    val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY) }
+    var sopralluogoDaEliminare by remember { mutableStateOf<Sopralluogo?>(null) }
+    val sediMap = sedi.associateBy { it.id }
 
     LazyColumn(
         modifier = Modifier
@@ -68,20 +86,41 @@ fun ClienteDettaglioScreen(
                 color = BrandNavy,
                 shape = RoundedCornerShape(22.dp)
             ) {
-                Column(Modifier.padding(20.dp)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         cliente?.ragioneSociale ?: "Cliente",
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White
                     )
                     cliente?.nomeCommerciale?.takeIf { it.isNotBlank() }?.let {
-                        Spacer(Modifier.height(3.dp))
                         Text(it, color = Color.White.copy(alpha = 0.8f))
                     }
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(4.dp))
                     OutlinedButton(onClick = onModificaCliente) {
                         Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White)
                         Text("  Modifica cliente", color = Color.White)
+                    }
+                    cliente?.let { c ->
+                        if (c.servizioHaccp) {
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onNuovoSopralluogoHaccp,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = BrandNavy)
+                            ) {
+                                Icon(Icons.Default.Assignment, contentDescription = null)
+                                Text("  Avvia sopralluogo HACCP")
+                            }
+                        }
+                        if (c.servizioSicurezza) {
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onNuovoSopralluogoSicurezza,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = BrandNavy)
+                            ) {
+                                Icon(Icons.Default.Assignment, contentDescription = null)
+                                Text("  Avvia sopralluogo Sicurezza")
+                            }
+                        }
                     }
                 }
             }
@@ -101,6 +140,9 @@ fun ClienteDettaglioScreen(
                             if (it.servizioSicurezza) ServiceChip("Sicurezza", SafetyOrange, SafetyContainer)
                             if (it.servizioGdpr) ServiceChip("GDPR", GdprPurple, GdprContainer)
                         }
+                        if (it.servizioHaccp) OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { onApriServizio("HACCP") }) { Text("Apri scheda HACCP") }
+                        if (it.servizioSicurezza) OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { onApriServizio("SICUREZZA") }) { Text("Apri scheda Sicurezza") }
+                        if (it.servizioGdpr) OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { onApriServizio("GDPR") }) { Text("Apri scheda GDPR") }
                         if (!it.servizioHaccp && !it.servizioSicurezza && !it.servizioGdpr) {
                             Text("Nessun servizio attivo", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -110,32 +152,82 @@ fun ClienteDettaglioScreen(
         }
 
         item {
-            cliente?.let { c ->
-                if (c.servizioHaccp || c.servizioSicurezza) {
-                    Card(
-                        Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE9EDF7)),
-                        shape = RoundedCornerShape(18.dp)
-                    ) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Icon(Icons.Default.Assignment, contentDescription = null, tint = BrandNavy)
-                                Text("Avvia sopralluogo", style = MaterialTheme.typography.titleMedium, color = BrandNavy)
-                            }
-                            Text(
-                                "Accesso rapido al sopralluogo del cliente selezionato.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (c.servizioHaccp) {
-                                Button(modifier = Modifier.fillMaxWidth(), onClick = onNuovoSopralluogoHaccp) {
-                                    Text("Sopralluogo HACCP")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Sopralluoghi effettuati", style = MaterialTheme.typography.titleLarge, color = BrandNavy)
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        "${sopralluoghi.size}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        color = BrandNavy
+                    )
+                }
+            }
+        }
+
+        if (sopralluoghi.isEmpty()) {
+            item {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text(
+                        "Nessun sopralluogo registrato per questo cliente.",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            items(sopralluoghi, key = { "sopralluogo-${it.id}" }) { sopralluogo ->
+                val isSafety = sopralluogo.tipoServizio == "SICUREZZA"
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                ServiceChip(
+                                    if (isSafety) "Sicurezza" else "HACCP",
+                                    if (isSafety) SafetyOrange else HaccpGreen,
+                                    if (isSafety) SafetyContainer else HaccpContainer
+                                )
+                                Surface(
+                                    color = if (sopralluogo.stato == "CHIUSO") Color(0xFFE4F4E8) else Color(0xFFFFF1D8),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text(
+                                        if (sopralluogo.stato == "CHIUSO") "Chiuso" else "In corso",
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                        color = if (sopralluogo.stato == "CHIUSO") Color(0xFF26713A) else Color(0xFF9A5B00)
+                                    )
                                 }
                             }
-                            if (c.servizioSicurezza) {
-                                Button(modifier = Modifier.fillMaxWidth(), onClick = onNuovoSopralluogoSicurezza) {
-                                    Text("Sopralluogo Sicurezza")
-                                }
+                            IconButton(onClick = { sopralluogoDaEliminare = sopralluogo }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Elimina sopralluogo", tint = MaterialTheme.colorScheme.error)
                             }
+                        }
+                        Text(
+                            formatter.format(Date(sopralluogo.dataOraEpochMillis)),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = BrandNavy
+                        )
+                        Text(
+                            sediMap[sopralluogo.sedeId]?.let { "${it.nome} - ${it.indirizzoCompleto()}" }
+                                ?: "Sede non disponibile",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onApriSopralluogo(sopralluogo.id, sopralluogo.tipoServizio) }
+                        ) {
+                            Icon(Icons.Default.Assignment, contentDescription = null)
+                            Text("  Apri sopralluogo")
                         }
                     }
                 }
@@ -158,7 +250,7 @@ fun ClienteDettaglioScreen(
         if (sedi.isEmpty()) {
             item { Text("Nessuna sede registrata.") }
         } else {
-            items(sedi, key = { it.id }) { sede ->
+            items(sedi, key = { "sede-${it.id}" }) { sede ->
                 Card(
                     Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -192,7 +284,29 @@ fun ClienteDettaglioScreen(
                 }
             }
         }
+    }
 
+    sopralluogoDaEliminare?.let { sopralluogo ->
+        AlertDialog(
+            onDismissRequest = { sopralluogoDaEliminare = null },
+            title = { Text("Eliminare il sopralluogo?") },
+            text = {
+                Text(
+                    "Il sopralluogo del ${formatter.format(Date(sopralluogo.dataOraEpochMillis))} e tutte le verifiche, non conformità e fotografie collegate verranno eliminati definitivamente."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.eliminaSopralluogo(sopralluogo.id)
+                        sopralluogoDaEliminare = null
+                    }
+                ) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { sopralluogoDaEliminare = null }) { Text("Annulla") }
+            }
+        )
     }
 }
 

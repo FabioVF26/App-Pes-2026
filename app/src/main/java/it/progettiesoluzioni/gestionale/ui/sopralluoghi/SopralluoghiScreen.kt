@@ -12,19 +12,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 import it.progettiesoluzioni.gestionale.ui.theme.HaccpContainer
@@ -45,7 +53,8 @@ fun SopralluoghiScreen(
     val sopralluoghi by viewModel.sopralluoghi.collectAsStateWithLifecycle()
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     val clientiMap = clienti.associateBy { it.id }
-    val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY)
+    val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY) }
+    var sopralluogoDaEliminare by remember { mutableStateOf<Sopralluogo?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -100,24 +109,31 @@ fun SopralluoghiScreen(
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val isSafety = sopralluogo.tipoServizio == "SICUREZZA"
-                            Surface(color = if (isSafety) SafetyContainer else HaccpContainer, shape = RoundedCornerShape(20.dp)) {
-                                Text(
-                                    if (isSafety) "SICUREZZA" else sopralluogo.tipoServizio,
-                                    color = if (isSafety) SafetyOrange else HaccpGreen,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                                )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val isSafety = sopralluogo.tipoServizio == "SICUREZZA"
+                                Surface(color = if (isSafety) SafetyContainer else HaccpContainer, shape = RoundedCornerShape(20.dp)) {
+                                    Text(
+                                        if (isSafety) "SICUREZZA" else sopralluogo.tipoServizio,
+                                        color = if (isSafety) SafetyOrange else HaccpGreen,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                                Surface(
+                                    color = if (sopralluogo.stato == "CHIUSO") Color(0xFFE4F4E8) else Color(0xFFFFF1D8),
+                                    shape = RoundedCornerShape(20.dp)
+                                ) {
+                                    Text(
+                                        if (sopralluogo.stato == "CHIUSO") "Chiuso" else "In corso",
+                                        color = if (sopralluogo.stato == "CHIUSO") Color(0xFF26713A) else Color(0xFF9A5B00),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
                             }
-                            Surface(
-                                color = if (sopralluogo.stato == "CHIUSO") Color(0xFFE4F4E8) else Color(0xFFFFF1D8),
-                                shape = RoundedCornerShape(20.dp)
+                            IconButton(
+                                onClick = { sopralluogoDaEliminare = sopralluogo }
                             ) {
-                                Text(
-                                    if (sopralluogo.stato == "CHIUSO") "Chiuso" else "In corso",
-                                    color = if (sopralluogo.stato == "CHIUSO") Color(0xFF26713A) else Color(0xFF9A5B00),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                                )
+                                Icon(Icons.Default.Delete, contentDescription = "Elimina sopralluogo", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                         Text(
@@ -130,5 +146,28 @@ fun SopralluoghiScreen(
                 }
             }
         }
+    }
+
+    sopralluogoDaEliminare?.let { sopralluogo ->
+        AlertDialog(
+            onDismissRequest = { sopralluogoDaEliminare = null },
+            title = { Text("Eliminare il sopralluogo?") },
+            text = {
+                Text(
+                    "Il sopralluogo del ${formatter.format(Date(sopralluogo.dataOraEpochMillis))} sarà eliminato definitivamente insieme a verifiche, non conformità e fotografie collegate."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.eliminaSopralluogo(sopralluogo.id)
+                        sopralluogoDaEliminare = null
+                    }
+                ) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { sopralluogoDaEliminare = null }) { Text("Annulla") }
+            }
+        )
     }
 }

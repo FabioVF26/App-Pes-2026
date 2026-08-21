@@ -23,4 +23,7 @@ interface NonConformitaDao {
 
     @Query("DELETE FROM non_conformita WHERE verificaId = :verificaId")
     suspend fun eliminaPerVerifica(verificaId: Long)
+
+    @Query("SELECT * FROM non_conformita ORDER BY sopralluogoId, id")
+    suspend fun tutteSnapshot(): List<NonConformita>
 }

@@ -24,4 +24,7 @@ interface SedeDao {
 
     @Query("SELECT id FROM sedi WHERE clienteId = :clienteId AND indirizzo = :indirizzo COLLATE NOCASE LIMIT 1")
     suspend fun trovaIdPerIndirizzo(clienteId: Long, indirizzo: String): Long?
+
+    @Query("SELECT * FROM sedi ORDER BY clienteId, principale DESC, nome")
+    suspend fun tutteSnapshot(): List<Sede>
 }

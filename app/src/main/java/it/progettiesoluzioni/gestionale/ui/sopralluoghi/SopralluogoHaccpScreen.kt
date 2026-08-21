@@ -66,6 +66,7 @@ fun SopralluogoHaccpScreen(
     val nonConformita by viewModel.nonConformita(sopralluogoId).collectAsStateWithLifecycle(initialValue = emptyList())
     var messaggio by remember { mutableStateOf<String?>(null) }
     var mostraConfermaChiusura by remember { mutableStateOf(false) }
+    var mostraConfermaEliminazione by remember { mutableStateOf(false) }
 
     val ncMap = nonConformita.associateBy { it.verificaId }
     val complete = verifiche.count { it.esito != "DA_VERIFICARE" }
@@ -150,10 +151,40 @@ fun SopralluogoHaccpScreen(
         }
 
         item {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { mostraConfermaEliminazione = true }
+            ) {
+                Text("Elimina sopralluogo", color = MaterialTheme.colorScheme.error)
+            }
+        }
+
+        item {
             OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onBack) {
                 Text("Torna all'elenco")
             }
         }
+    }
+
+    if (mostraConfermaEliminazione) {
+        AlertDialog(
+            onDismissRequest = { mostraConfermaEliminazione = false },
+            title = { Text("Eliminare il sopralluogo?") },
+            text = {
+                Text("L'eliminazione è definitiva e rimuove anche verifiche, non conformità e fotografie collegate al sopralluogo.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        mostraConfermaEliminazione = false
+                        viewModel.eliminaSopralluogo(sopralluogoId) { onBack() }
+                    }
+                ) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostraConfermaEliminazione = false }) { Text("Annulla") }
+            }
+        )
     }
 
     if (mostraConfermaChiusura) {

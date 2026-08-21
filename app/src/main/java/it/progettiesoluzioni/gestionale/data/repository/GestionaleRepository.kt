@@ -3,6 +3,8 @@ package it.progettiesoluzioni.gestionale.data.repository
 import androidx.room.withTransaction
 import it.progettiesoluzioni.gestionale.data.database.AppDatabase
 import it.progettiesoluzioni.gestionale.data.model.Cliente
+import it.progettiesoluzioni.gestionale.data.model.AttivitaScadenza
+import it.progettiesoluzioni.gestionale.data.model.DocumentoCliente
 import it.progettiesoluzioni.gestionale.data.model.NonConformita
 import it.progettiesoluzioni.gestionale.data.model.Sede
 import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
@@ -11,13 +13,18 @@ import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 class GestionaleRepository(private val db: AppDatabase) {
     val clienti = db.clienteDao().osservaClienti()
     val numeroClienti = db.clienteDao().contaClientiAttivi()
+    val attivitaScadenze = db.attivitaScadenzaDao().osservaTutte()
+    val documenti = db.documentoClienteDao().osservaTutti()
 
     fun cliente(id: Long) = db.clienteDao().osservaCliente(id)
     fun sedi(clienteId: Long) = db.sedeDao().osservaSedi(clienteId)
     fun sopralluoghi() = db.sopralluogoDao().osservaTutti()
+    fun sopralluoghiCliente(clienteId: Long) = db.sopralluogoDao().osservaPerCliente(clienteId)
     fun sopralluogo(id: Long) = db.sopralluogoDao().osserva(id)
     fun verifiche(sopralluogoId: Long) = db.verificaSopralluogoDao().osservaPerSopralluogo(sopralluogoId)
     fun nonConformita(sopralluogoId: Long) = db.nonConformitaDao().osservaPerSopralluogo(sopralluogoId)
+    fun attivitaCliente(clienteId: Long) = db.attivitaScadenzaDao().osservaPerCliente(clienteId)
+    fun documentiCliente(clienteId: Long) = db.documentoClienteDao().osservaPerCliente(clienteId)
 
     suspend fun inserisciClienteConSede(cliente: Cliente, sede: Sede) {
         db.withTransaction {
@@ -87,6 +94,25 @@ class GestionaleRepository(private val db: AppDatabase) {
         clientiInseriti to sediInserite
     }
 
+
+    suspend fun inserisciAttivita(item: AttivitaScadenza) = db.attivitaScadenzaDao().inserisci(item)
+    suspend fun aggiornaAttivita(item: AttivitaScadenza) = db.attivitaScadenzaDao().aggiorna(item)
+    suspend fun eliminaAttivita(item: AttivitaScadenza) = db.attivitaScadenzaDao().elimina(item)
+
+    suspend fun inserisciDocumento(item: DocumentoCliente) = db.documentoClienteDao().inserisci(item)
+    suspend fun aggiornaDocumento(item: DocumentoCliente) = db.documentoClienteDao().aggiorna(item)
+    suspend fun eliminaDocumento(item: DocumentoCliente) = db.documentoClienteDao().elimina(item)
+
+    suspend fun backupSnapshot(): BackupSnapshot = BackupSnapshot(
+        clienti = db.clienteDao().tuttiSnapshot(),
+        sedi = db.sedeDao().tutteSnapshot(),
+        attivita = db.attivitaScadenzaDao().tutteSnapshot(),
+        documenti = db.documentoClienteDao().tuttiSnapshot(),
+        sopralluoghi = db.sopralluogoDao().tuttiSnapshot(),
+        verifiche = db.verificaSopralluogoDao().tutteSnapshot(),
+        nonConformita = db.nonConformitaDao().tutteSnapshot()
+    )
+
     suspend fun creaSopralluogoHaccp(clienteId: Long, sedeId: Long, note: String): Long = db.withTransaction {
         val id = db.sopralluogoDao().inserisci(
             Sopralluogo(
@@ -149,6 +175,8 @@ class GestionaleRepository(private val db: AppDatabase) {
     }
 
     suspend fun eliminaNonConformitaPerVerifica(verificaId: Long) = db.nonConformitaDao().eliminaPerVerifica(verificaId)
+
+    suspend fun eliminaSopralluogo(id: Long) = db.sopralluogoDao().eliminaPerId(id)
 
     suspend fun chiudiSopralluogo(sopralluogo: Sopralluogo): Boolean {
         db.sopralluogoDao().aggiorna(sopralluogo.copy(stato = "CHIUSO"))
@@ -217,3 +245,14 @@ object SicurezzaChecklist {
         ChecklistVoce("S27", "Segnaletica e comportamenti", "Istruzioni, procedure e comportamenti osservati risultano coerenti con le misure previste nel DVR", "D.Lgs. 81/2008, artt. 18, 19 e 20")
     )
 }
+
+
+data class BackupSnapshot(
+    val clienti: List<Cliente>,
+    val sedi: List<Sede>,
+    val attivita: List<AttivitaScadenza>,
+    val documenti: List<DocumentoCliente>,
+    val sopralluoghi: List<Sopralluogo>,
+    val verifiche: List<VerificaSopralluogo>,
+    val nonConformita: List<NonConformita>
+)

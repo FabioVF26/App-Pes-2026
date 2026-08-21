@@ -75,7 +75,15 @@ object SopralluogoPdfReport {
         val pdf = PdfDocument()
         val dateTime = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY)
         val dateOnly = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
-        val ncByVerifica = nonConformita.associateBy { it.verificaId }
+        val nonConformitaReport = if (sopralluogo.tipoServizio == "SICUREZZA") {
+            nonConformita.map { nc ->
+                if (nc.sanzionePossibile.isBlank()) {
+                    val codice = verifiche.firstOrNull { it.id == nc.verificaId }?.codice.orEmpty()
+                    nc.copy(sanzionePossibile = SanzioniSicurezza.proposta(codice))
+                } else nc
+            }
+        } else nonConformita
+        val ncByVerifica = nonConformitaReport.associateBy { it.verificaId }
         val reportCode = "PS-${sopralluogo.tipoServizio.take(3).uppercase(Locale.ITALY)}-${dateOnly.format(Date(sopralluogo.dataOraEpochMillis)).replace("/", "")}-${sopralluogo.id}"
 
         val pTitle = paint(20f, NAVY, true)
@@ -202,11 +210,11 @@ object SopralluogoPdfReport {
             y = maxOf(y + 5f, oldY + noteH + 8f)
         }
 
-        if (nonConformita.isNotEmpty()) {
+        if (nonConformitaReport.isNotEmpty()) {
             ensure(70f)
             drawSectionBar(currentCanvas!!, y, "NON CONFORMITÀ RILEVATE", RED, pWhite)
             y += 28f
-            nonConformita.forEachIndexed { i, n ->
+            nonConformitaReport.forEachIndexed { i, n ->
                 val linked = verifiche.firstOrNull { it.id == n.verificaId }
                 val titleText = "NC ${i + 1}${linked?.let { " - ${it.codice}" } ?: ""}: ${n.descrizione.ifBlank { "Descrizione non compilata" }}"
                 val h = 34f + wrappedHeight(titleText, pBodyBold, PAGE_W - MARGIN * 2 - 22f) +
@@ -279,11 +287,11 @@ object SopralluogoPdfReport {
         }
 
         // Schede dettagliate NC con foto
-        if (nonConformita.isNotEmpty()) {
+        if (nonConformitaReport.isNotEmpty()) {
             startPage(true)
             drawSectionBar(currentCanvas!!, y, "SCHEDE DI NON CONFORMITÀ", RED, pWhite)
             y += 34f
-            nonConformita.forEachIndexed { index, n ->
+            nonConformitaReport.forEachIndexed { index, n ->
                 val v = verifiche.firstOrNull { it.id == n.verificaId }
                 ensure(160f)
                 val heading = "NC ${index + 1}${v?.let { " - ${it.codice}" } ?: ""}"
@@ -357,11 +365,11 @@ object SopralluogoPdfReport {
         ensure(165f)
         drawSectionBar(currentCanvas!!, y, "CONCLUSIONI", NAVY, pWhite)
         y += 30f
-        val conclusion = buildConclusion(conf, ncCount, na, dv, nonConformita)
+        val conclusion = buildConclusion(conf, ncCount, na, dv, nonConformitaReport)
         drawWrapped(conclusion, pBody, lineH = 12f)
         y += 10f
 
-        if (nonConformita.any { it.sanzionePossibile.isNotBlank() }) {
+        if (nonConformitaReport.any { it.sanzionePossibile.isNotBlank() }) {
             val disclaimer = "Le indicazioni sanzionatorie riportate nella relazione hanno esclusivamente funzione di supporto tecnico. L'effettiva applicabilità della sanzione, il soggetto obbligato, il precetto violato, l'importo e gli eventuali aggiornamenti devono essere verificati sulla fattispecie concreta e sulla normativa vigente alla data della contestazione."
             val dh = wrappedHeight(disclaimer, pSmall, PAGE_W - MARGIN * 2 - 22f, 10f) + 30f
             ensure(dh + 10f)

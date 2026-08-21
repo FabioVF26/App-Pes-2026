@@ -20,4 +20,7 @@ interface VerificaSopralluogoDao {
 
     @Query("SELECT COUNT(*) FROM verifiche_sopralluogo WHERE sopralluogoId = :sopralluogoId AND esito = 'DA_VERIFICARE'")
     suspend fun contaDaVerificare(sopralluogoId: Long): Int
+
+    @Query("SELECT * FROM verifiche_sopralluogo ORDER BY sopralluogoId, ordine")
+    suspend fun tutteSnapshot(): List<VerificaSopralluogo>
 }

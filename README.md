@@ -1,34 +1,31 @@
-# P&S Gestionale v0.6.1
+# P&S Gestionale v0.8.0
 
-Correzioni principali:
-- accesso rapido ai sopralluoghi dalla parte alta della scheda cliente;
-- campo Possibile sanzione nelle non conformità Sicurezza;
-- proposta automatica collegata alla voce di checklist, sempre modificabile;
-- possibile sanzione riportata nella relazione PDF;
-- avvertenza nel PDF sul carattere indicativo della proposta sanzionatoria;
-- migrazione database 3 -> 4 senza perdita dei dati.
+Versione successiva alla v0.7.3. Il modulo Lavoratori è stato escluso su richiesta.
 
-# P&S Gestionale v0.6
+## Novità
+- Scadenze e attività operative collegate ai clienti.
+- Filtri: aperte, scadute, entro 30 giorni, completate, tutte.
+- Priorità e servizio (Generale, HACCP, Sicurezza, GDPR).
+- Possibilità di completare o eliminare un'attività.
+- Archivio documenti con scelta file Android, cliente, sede facoltativa, servizio, categoria, scadenza e note.
+- Apertura dei documenti registrati dall'app.
+- Schede servizio HACCP / Sicurezza / GDPR accessibili dalla scheda cliente.
+- Ogni scheda servizio riepiloga attività, documenti e sopralluoghi pertinenti.
+- Dashboard aggiornata con sopralluoghi reali, attività scadute, attività entro 30 giorni e prossime attività.
+- Esportazione backup JSON con clienti, sedi, attività, documenti, sopralluoghi, verifiche e non conformità.
+- Il backup conserva i riferimenti ai file/foto, ma non incorpora i file binari originali.
+- Migrazione Room automatica database v4 -> v5: i dati esistenti vengono mantenuti.
 
-Versione con:
-- anagrafica clienti e sedi;
-- navigazione verso la sede;
-- sopralluoghi HACCP;
-- sopralluoghi Sicurezza D.Lgs. 81/2008;
-- gestione esiti e non conformità;
-- generazione e condivisione della relazione PDF per sopralluoghi HACCP e Sicurezza;
-- popolamento iniziale dal master clienti.
+## Non incluso
+- Modulo Lavoratori (escluso dalla roadmap).
+- Ripristino automatico del backup: da implementare dopo verifica del formato di esportazione.
 
-Il modulo Sicurezza usa una checklist generale con voci marcate "ove applicabile" quando l'obbligo dipende da rischi, attività, attrezzature o organizzazione aziendale. La formazione richiama l'Accordo Stato-Regioni del 17 aprile 2025.
+## Build GitHub Actions
+Artifact: `PS-Gestionale-v0.8-debug`
 
-## Versione 0.7.0 - Relazione PDF professionale
-- Intestazione con logo Progetti e Soluzioni e codice relazione.
-- Dati cliente/sede in riquadro dedicato.
-- Riepilogo grafico esiti.
-- Sezioni e verifiche impaginate a card con colore per esito.
-- Riepilogo NC in evidenza.
-- Schede dettagliate NC con azioni, priorità, stato, termine, efficacia e possibile sanzione.
-- Inserimento automatico delle foto della NC e della foto di risoluzione, quando presenti.
-- Nota separata sulle sanzioni e carattere indicativo delle stesse.
-- Conclusioni automatiche coerenti con gli esiti registrati.
-- Firme finali, codice relazione e numerazione pagine.
+Configurazione invariata:
+- compileSdk 37
+- targetSdk 37
+- Android SDK `platforms;android-37.0`
+- Gradle 9.5.0
+- Room 2.8.4 + KSP

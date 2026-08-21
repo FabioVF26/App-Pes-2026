@@ -7,14 +7,16 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import it.progettiesoluzioni.gestionale.data.model.Cliente
+import it.progettiesoluzioni.gestionale.data.model.AttivitaScadenza
+import it.progettiesoluzioni.gestionale.data.model.DocumentoCliente
 import it.progettiesoluzioni.gestionale.data.model.NonConformita
 import it.progettiesoluzioni.gestionale.data.model.Sede
 import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 
 @Database(
-    entities = [Cliente::class, Sede::class, Sopralluogo::class, VerificaSopralluogo::class, NonConformita::class],
-    version = 4,
+    entities = [Cliente::class, Sede::class, Sopralluogo::class, VerificaSopralluogo::class, NonConformita::class, AttivitaScadenza::class, DocumentoCliente::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -23,6 +25,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sopralluogoDao(): SopralluogoDao
     abstract fun verificaSopralluogoDao(): VerificaSopralluogoDao
     abstract fun nonConformitaDao(): NonConformitaDao
+    abstract fun attivitaScadenzaDao(): AttivitaScadenzaDao
+    abstract fun documentoClienteDao(): DocumentoClienteDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -86,12 +90,54 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS attivita_scadenze (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        clienteId INTEGER NOT NULL,
+                        servizio TEXT NOT NULL,
+                        titolo TEXT NOT NULL,
+                        descrizione TEXT NOT NULL,
+                        priorita TEXT NOT NULL,
+                        stato TEXT NOT NULL,
+                        scadenzaEpochMillis INTEGER,
+                        creataEpochMillis INTEGER NOT NULL,
+                        completataEpochMillis INTEGER,
+                        FOREIGN KEY(clienteId) REFERENCES clienti(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_attivita_scadenze_clienteId ON attivita_scadenze(clienteId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_attivita_scadenze_scadenzaEpochMillis ON attivita_scadenze(scadenzaEpochMillis)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS documenti_cliente (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        clienteId INTEGER NOT NULL,
+                        sedeId INTEGER,
+                        servizio TEXT NOT NULL,
+                        categoria TEXT NOT NULL,
+                        titolo TEXT NOT NULL,
+                        uri TEXT NOT NULL,
+                        dataDocumentoEpochMillis INTEGER,
+                        scadenzaEpochMillis INTEGER,
+                        note TEXT NOT NULL,
+                        creatoEpochMillis INTEGER NOT NULL,
+                        FOREIGN KEY(clienteId) REFERENCES clienti(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(sedeId) REFERENCES sedi(id) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_documenti_cliente_clienteId ON documenti_cliente(clienteId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_documenti_cliente_sedeId ON documenti_cliente(sedeId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_documenti_cliente_scadenzaEpochMillis ON documenti_cliente(scadenzaEpochMillis)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 "ps_gestionale.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 .also { INSTANCE = it }
         }
