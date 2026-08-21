@@ -35,4 +35,25 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
             onSaved()
         }
     }
+
+    fun aggiornaCliente(cliente: Cliente, onSaved: () -> Unit) {
+        viewModelScope.launch {
+            repository.aggiornaCliente(cliente)
+            onSaved()
+        }
+    }
+
+    fun archiviaCliente(cliente: Cliente, onDone: () -> Unit) {
+        viewModelScope.launch {
+            repository.archiviaCliente(cliente)
+            onDone()
+        }
+    }
+
+    fun aggiungiSede(sede: Sede, onSaved: () -> Unit) {
+        viewModelScope.launch {
+            repository.inserisciSede(sede)
+            onSaved()
+        }
+    }
 }

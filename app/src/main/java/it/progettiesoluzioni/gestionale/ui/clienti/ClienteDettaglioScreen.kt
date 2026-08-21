@@ -15,14 +15,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Directions
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +44,12 @@ import it.progettiesoluzioni.gestionale.ui.theme.SafetyContainer
 import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
 
 @Composable
-fun ClienteDettaglioScreen(clienteId: Long, viewModel: GestionaleViewModel) {
+fun ClienteDettaglioScreen(
+    clienteId: Long,
+    viewModel: GestionaleViewModel,
+    onModificaCliente: () -> Unit,
+    onAggiungiSede: () -> Unit
+) {
     val cliente by viewModel.cliente(clienteId).collectAsStateWithLifecycle(initialValue = null)
     val sedi by viewModel.sedi(clienteId).collectAsStateWithLifecycle(initialValue = emptyList())
     val context = LocalContext.current
@@ -67,6 +75,11 @@ fun ClienteDettaglioScreen(clienteId: Long, viewModel: GestionaleViewModel) {
                     cliente?.nomeCommerciale?.takeIf { it.isNotBlank() }?.let {
                         Spacer(Modifier.height(3.dp))
                         Text(it, color = Color.White.copy(alpha = 0.8f))
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    OutlinedButton(onClick = onModificaCliente) {
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White)
+                        Text("  Modifica cliente", color = Color.White)
                     }
                 }
             }
@@ -94,7 +107,19 @@ fun ClienteDettaglioScreen(clienteId: Long, viewModel: GestionaleViewModel) {
             }
         }
 
-        item { Text("Sedi operative", style = MaterialTheme.typography.titleLarge, color = BrandNavy) }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Sedi operative", style = MaterialTheme.typography.titleLarge, color = BrandNavy)
+                OutlinedButton(onClick = onAggiungiSede) {
+                    Icon(Icons.Default.AddLocationAlt, contentDescription = null)
+                    Text("  Aggiungi")
+                }
+            }
+        }
+
         if (sedi.isEmpty()) {
             item { Text("Nessuna sede registrata.") }
         } else {
@@ -108,7 +133,12 @@ fun ClienteDettaglioScreen(clienteId: Long, viewModel: GestionaleViewModel) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                             Column {
-                                Text(sede.nome, style = MaterialTheme.typography.titleMedium)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(sede.nome, style = MaterialTheme.typography.titleMedium)
+                                    if (sede.principale) {
+                                        ServiceChip("Principale", MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.secondaryContainer)
+                                    }
+                                }
                                 Text(
                                     sede.indirizzoCompleto().ifBlank { "Indirizzo non inserito" },
                                     color = MaterialTheme.colorScheme.onSurfaceVariant

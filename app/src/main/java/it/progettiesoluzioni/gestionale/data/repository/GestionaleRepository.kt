@@ -19,4 +19,15 @@ class GestionaleRepository(private val db: AppDatabase) {
             db.sedeDao().inserisci(sede.copy(clienteId = clienteId))
         }
     }
+
+    suspend fun aggiornaCliente(cliente: Cliente) = db.clienteDao().aggiorna(cliente)
+
+    suspend fun archiviaCliente(cliente: Cliente) =
+        db.clienteDao().aggiorna(cliente.copy(attivo = false))
+
+    suspend fun inserisciSede(sede: Sede) = db.sedeDao().inserisci(sede)
+
+    suspend fun aggiornaSede(sede: Sede) = db.sedeDao().aggiorna(sede)
+
+    suspend fun eliminaSede(sede: Sede) = db.sedeDao().elimina(sede)
 }

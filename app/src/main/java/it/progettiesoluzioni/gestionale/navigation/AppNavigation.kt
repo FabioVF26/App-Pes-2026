@@ -27,6 +27,8 @@ import androidx.navigation.compose.rememberNavController
 import it.progettiesoluzioni.gestionale.ui.clienti.ClienteDettaglioScreen
 import it.progettiesoluzioni.gestionale.ui.clienti.ClientiScreen
 import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
+import it.progettiesoluzioni.gestionale.ui.clienti.ModificaClienteScreen
+import it.progettiesoluzioni.gestionale.ui.clienti.NuovaSedeScreen
 import it.progettiesoluzioni.gestionale.ui.clienti.NuovoClienteScreen
 import it.progettiesoluzioni.gestionale.ui.common.PlaceholderScreen
 import it.progettiesoluzioni.gestionale.ui.dashboard.DashboardScreen
@@ -97,7 +99,29 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
             }
             composable("cliente/{clienteId}") { entry ->
                 val id = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
-                ClienteDettaglioScreen(id, viewModel)
+                ClienteDettaglioScreen(
+                    clienteId = id,
+                    viewModel = viewModel,
+                    onModificaCliente = { navController.navigate("modificaCliente/$id") },
+                    onAggiungiSede = { navController.navigate("nuovaSede/$id") }
+                )
+            }
+            composable("modificaCliente/{clienteId}") { entry ->
+                val id = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
+                ModificaClienteScreen(
+                    clienteId = id,
+                    viewModel = viewModel,
+                    onSaved = { navController.popBackStack() },
+                    onArchived = {
+                        navController.navigate("clienti") {
+                            popUpTo("clienti") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable("nuovaSede/{clienteId}") { entry ->
+                val id = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
+                NuovaSedeScreen(id, viewModel) { navController.popBackStack() }
             }
             composable("scadenze") { PlaceholderScreen("Scadenze", "Modulo predisposto per la prossima fase.") }
             composable("sopralluoghi") { PlaceholderScreen("Sopralluoghi", "Le checklist specifiche saranno definite per HACCP, Sicurezza e GDPR.") }
