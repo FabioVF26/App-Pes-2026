@@ -33,8 +33,10 @@ import it.progettiesoluzioni.gestionale.ui.clienti.NuovoClienteScreen
 import it.progettiesoluzioni.gestionale.ui.common.PlaceholderScreen
 import it.progettiesoluzioni.gestionale.ui.dashboard.DashboardScreen
 import it.progettiesoluzioni.gestionale.ui.sopralluoghi.NuovoSopralluogoHaccpScreen
+import it.progettiesoluzioni.gestionale.ui.sopralluoghi.NuovoSopralluogoSicurezzaScreen
 import it.progettiesoluzioni.gestionale.ui.sopralluoghi.SopralluoghiScreen
 import it.progettiesoluzioni.gestionale.ui.sopralluoghi.SopralluogoHaccpScreen
+import it.progettiesoluzioni.gestionale.ui.sopralluoghi.SopralluogoSicurezzaScreen
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 
 private data class NavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
@@ -105,7 +107,8 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                     viewModel = viewModel,
                     onModificaCliente = { navController.navigate("modificaCliente/$id") },
                     onAggiungiSede = { navController.navigate("nuovaSede/$id") },
-                    onNuovoSopralluogoHaccp = { navController.navigate("nuovoSopralluogoHaccp/$id") }
+                    onNuovoSopralluogoHaccp = { navController.navigate("nuovoSopralluogoHaccp/$id") },
+                    onNuovoSopralluogoSicurezza = { navController.navigate("nuovoSopralluogoSicurezza/$id") }
                 )
             }
             composable("modificaCliente/{clienteId}") { entry ->
@@ -128,7 +131,11 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 SopralluoghiScreen(
                     viewModel = viewModel,
                     onNuovoHaccp = { navController.navigate("nuovoSopralluogoHaccp/0") },
-                    onApri = { navController.navigate("sopralluogoHaccp/$it") }
+                    onNuovoSicurezza = { navController.navigate("nuovoSopralluogoSicurezza/0") },
+                    onApri = { idSopralluogo, tipo ->
+                        if (tipo == "SICUREZZA") navController.navigate("sopralluogoSicurezza/$idSopralluogo")
+                        else navController.navigate("sopralluogoHaccp/$idSopralluogo")
+                    }
                 )
             }
             composable("nuovoSopralluogoHaccp/{clienteId}") { entry ->
@@ -147,6 +154,24 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 val id = entry.arguments?.getString("sopralluogoId")?.toLongOrNull() ?: return@composable
                 SopralluogoHaccpScreen(id, viewModel) { navController.popBackStack() }
             }
+
+            composable("nuovoSopralluogoSicurezza/{clienteId}") { entry ->
+                val id = entry.arguments?.getString("clienteId")?.toLongOrNull()?.takeIf { it > 0 }
+                NuovoSopralluogoSicurezzaScreen(
+                    viewModel = viewModel,
+                    clientePreselezionato = id,
+                    onCreated = { sopralluogoId ->
+                        navController.navigate("sopralluogoSicurezza/$sopralluogoId") {
+                            popUpTo("sopralluoghi")
+                        }
+                    }
+                )
+            }
+            composable("sopralluogoSicurezza/{sopralluogoId}") { entry ->
+                val id = entry.arguments?.getString("sopralluogoId")?.toLongOrNull() ?: return@composable
+                SopralluogoSicurezzaScreen(id, viewModel) { navController.popBackStack() }
+            }
+
             composable("documenti") { PlaceholderScreen("Documenti", "Archivio documentale previsto nelle prossime versioni.") }
         }
     }

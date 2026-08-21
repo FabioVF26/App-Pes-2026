@@ -113,6 +113,33 @@ class GestionaleRepository(private val db: AppDatabase) {
         id
     }
 
+
+    suspend fun creaSopralluogoSicurezza(clienteId: Long, sedeId: Long, note: String): Long = db.withTransaction {
+        val id = db.sopralluogoDao().inserisci(
+            Sopralluogo(
+                clienteId = clienteId,
+                sedeId = sedeId,
+                tipoServizio = "SICUREZZA",
+                dataOraEpochMillis = System.currentTimeMillis(),
+                stato = "BOZZA",
+                noteGenerali = note
+            )
+        )
+        db.verificaSopralluogoDao().inserisciTutte(
+            SicurezzaChecklist.voci.mapIndexed { index, voce ->
+                VerificaSopralluogo(
+                    sopralluogoId = id,
+                    codice = voce.codice,
+                    sezione = voce.sezione,
+                    titolo = voce.titolo,
+                    riferimentoNormativo = voce.riferimento,
+                    ordine = index
+                )
+            }
+        )
+        id
+    }
+
     suspend fun aggiornaVerifica(verifica: VerificaSopralluogo) = db.verificaSopralluogoDao().aggiorna(verifica)
 
     suspend fun salvaNonConformita(nonConformita: NonConformita) {
@@ -124,7 +151,6 @@ class GestionaleRepository(private val db: AppDatabase) {
     suspend fun eliminaNonConformitaPerVerifica(verificaId: Long) = db.nonConformitaDao().eliminaPerVerifica(verificaId)
 
     suspend fun chiudiSopralluogo(sopralluogo: Sopralluogo): Boolean {
-        if (db.verificaSopralluogoDao().contaDaVerificare(sopralluogo.id) > 0) return false
         db.sopralluogoDao().aggiorna(sopralluogo.copy(stato = "CHIUSO"))
         return true
     }
@@ -156,5 +182,38 @@ object HaccpChecklist {
         ChecklistVoce("H20", "Personale e igiene", "Personale mantiene adeguato livello di igiene personale e abbigliamento idoneo", "Reg. (CE) 852/2004, All. II, Cap. VIII"),
         ChecklistVoce("H21", "Personale e formazione", "Addetti sono supervisionati e/o formati in materia di igiene alimentare in relazione all'attività svolta", "Reg. (CE) 852/2004, All. II, Cap. XII"),
         ChecklistVoce("H22", "Acqua e approvvigionamento", "Acqua utilizzata nelle operazioni alimentari è adeguata e gestita secondo i requisiti applicabili", "Reg. (CE) 852/2004, All. II, Cap. VII")
+    )
+}
+
+
+object SicurezzaChecklist {
+    val voci = listOf(
+        ChecklistVoce("S01", "Documentazione e organizzazione", "Documento di valutazione dei rischi presente, coerente con attività, mansioni e rischi effettivi e aggiornato quando necessario", "D.Lgs. 81/2008, artt. 17, 28 e 29"),
+        ChecklistVoce("S02", "Documentazione e organizzazione", "Organizzazione del servizio di prevenzione e protezione definita e incarichi formalizzati", "D.Lgs. 81/2008, artt. 17, 31-33"),
+        ChecklistVoce("S03", "Documentazione e organizzazione", "RLS/RLST individuato e consultato nei casi previsti", "D.Lgs. 81/2008, artt. 47-50"),
+        ChecklistVoce("S04", "Documentazione e organizzazione", "Gestione di appalti, cooperazione e coordinamento documentata ove applicabile", "D.Lgs. 81/2008, art. 26"),
+        ChecklistVoce("S05", "Formazione e competenze", "Formazione dei lavoratori coerente con mansione e rischio e documentazione disponibile", "D.Lgs. 81/2008, art. 37; Accordo Stato-Regioni 17/04/2025"),
+        ChecklistVoce("S06", "Formazione e competenze", "Formazione di dirigenti e preposti effettuata ove prevista e coerente con i ruoli effettivamente esercitati", "D.Lgs. 81/2008, artt. 18, 19 e 37; Accordo Stato-Regioni 17/04/2025"),
+        ChecklistVoce("S07", "Formazione e competenze", "Addestramento specifico documentato per attrezzature, DPI e attività che lo richiedono", "D.Lgs. 81/2008, artt. 37, 71, 73 e 77"),
+        ChecklistVoce("S08", "Emergenze", "Addetti alla prevenzione incendi e al primo soccorso individuati in numero adeguato e formati", "D.Lgs. 81/2008, artt. 18, 43-46"),
+        ChecklistVoce("S09", "Emergenze", "Presidi di primo soccorso disponibili, accessibili e adeguatamente mantenuti", "D.Lgs. 81/2008, art. 45; D.M. 388/2003"),
+        ChecklistVoce("S10", "Emergenze", "Misure antincendio, gestione dell'esodo e procedure di emergenza adeguate all'attività", "D.Lgs. 81/2008, artt. 43 e 46; decreti antincendio applicabili"),
+        ChecklistVoce("S11", "Sorveglianza sanitaria", "Medico competente nominato quando la valutazione dei rischi individua obblighi di sorveglianza sanitaria", "D.Lgs. 81/2008, artt. 18, 25 e 41"),
+        ChecklistVoce("S12", "Sorveglianza sanitaria", "Giudizi di idoneità e scadenze della sorveglianza sanitaria risultano gestiti nel rispetto della riservatezza", "D.Lgs. 81/2008, artt. 25 e 41"),
+        ChecklistVoce("S13", "Luoghi di lavoro", "Luoghi di lavoro, vie di circolazione, pavimenti, scale, servizi e spazi risultano sicuri e mantenuti", "D.Lgs. 81/2008, artt. 63-64 e Allegato IV"),
+        ChecklistVoce("S14", "Luoghi di lavoro", "Illuminazione, aerazione, microclima e condizioni dei locali risultano adeguati alle attività svolte", "D.Lgs. 81/2008, Allegato IV"),
+        ChecklistVoce("S15", "Impianti e attrezzature", "Impianti elettrici e protezioni risultano mantenuti e gestiti in condizioni di sicurezza", "D.Lgs. 81/2008, artt. 80-86"),
+        ChecklistVoce("S16", "Impianti e attrezzature", "Attrezzature di lavoro sono idonee, mantenute e sottoposte ai controlli previsti", "D.Lgs. 81/2008, artt. 70-71"),
+        ChecklistVoce("S17", "Impianti e attrezzature", "Uso delle attrezzature riservato a personale informato, formato e, ove richiesto, abilitato", "D.Lgs. 81/2008, artt. 71 e 73; Accordo Stato-Regioni 17/04/2025 ove applicabile"),
+        ChecklistVoce("S18", "DPI", "DPI individuati sulla base dei rischi, consegnati e mantenuti in efficienza", "D.Lgs. 81/2008, artt. 74-79"),
+        ChecklistVoce("S19", "DPI", "Lavoratori informati, formati e addestrati all'uso dei DPI quando previsto", "D.Lgs. 81/2008, art. 77"),
+        ChecklistVoce("S20", "Rischi specifici", "Rischio da movimentazione manuale dei carichi valutato e gestito ove presente", "D.Lgs. 81/2008, Titolo VI, artt. 167-171"),
+        ChecklistVoce("S21", "Rischi specifici", "Rischio da videoterminali valutato e gestito ove applicabile", "D.Lgs. 81/2008, Titolo VII, artt. 172-179"),
+        ChecklistVoce("S22", "Rischi specifici", "Rischio da agenti chimici valutato, con SDS, procedure, stoccaggio e misure di prevenzione coerenti", "D.Lgs. 81/2008, Titolo IX, Capo I"),
+        ChecklistVoce("S23", "Rischi specifici", "Rischi fisici pertinenti all'attività (rumore, vibrazioni, CEM, ROA) valutati ove applicabili", "D.Lgs. 81/2008, Titolo VIII"),
+        ChecklistVoce("S24", "Rischi specifici", "Rischio da stress lavoro-correlato incluso nella valutazione dei rischi", "D.Lgs. 81/2008, art. 28"),
+        ChecklistVoce("S25", "Lavori in quota", "Lavori in quota, scale, ponteggi, PLE o sistemi su funi gestiti secondo requisiti specifici ove presenti", "D.Lgs. 81/2008, Titolo IV, artt. 111-116 e disposizioni pertinenti"),
+        ChecklistVoce("S26", "Segnaletica e comportamenti", "Segnaletica di sicurezza presente e coerente con i rischi residui e le procedure", "D.Lgs. 81/2008, Titolo V"),
+        ChecklistVoce("S27", "Segnaletica e comportamenti", "Istruzioni, procedure e comportamenti osservati risultano coerenti con le misure previste nel DVR", "D.Lgs. 81/2008, artt. 18, 19 e 20")
     )
 }

@@ -1,5 +1,6 @@
 package it.progettiesoluzioni.gestionale.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -32,5 +33,10 @@ data class NonConformita(
     val priorita: String = "MEDIA",
     val stato: String = "APERTA",
     val termineEpochMillis: Long? = null,
-    val fotoUri: String = ""
+    val fotoUri: String = "",
+    @ColumnInfo(defaultValue = "''") val fotoRisoluzioneUri: String = "",
+    @ColumnInfo(defaultValue = "'DA_VERIFICARE'") val verificaEfficacia: String = "DA_VERIFICARE",
+    @ColumnInfo(defaultValue = "''") val noteVerifica: String = "",
+    val dataRisoluzioneEpochMillis: Long? = null,
+    val dataChiusuraEpochMillis: Long? = null
 )

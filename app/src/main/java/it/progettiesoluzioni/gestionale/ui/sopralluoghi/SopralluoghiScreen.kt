@@ -29,6 +29,8 @@ import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 import it.progettiesoluzioni.gestionale.ui.theme.HaccpContainer
 import it.progettiesoluzioni.gestionale.ui.theme.HaccpGreen
+import it.progettiesoluzioni.gestionale.ui.theme.SafetyContainer
+import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -37,7 +39,8 @@ import java.util.Locale
 fun SopralluoghiScreen(
     viewModel: GestionaleViewModel,
     onNuovoHaccp: () -> Unit,
-    onApri: (Long) -> Unit
+    onNuovoSicurezza: () -> Unit,
+    onApri: (Long, String) -> Unit
 ) {
     val sopralluoghi by viewModel.sopralluoghi.collectAsStateWithLifecycle()
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
@@ -67,6 +70,10 @@ fun SopralluoghiScreen(
                         Icon(Icons.Default.Add, contentDescription = null)
                         Text("  Nuovo sopralluogo HACCP")
                     }
+                    Button(onClick = onNuovoSicurezza) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Text("  Nuovo sopralluogo Sicurezza")
+                    }
                 }
             }
         }
@@ -88,16 +95,17 @@ fun SopralluoghiScreen(
             items(sopralluoghi, key = { it.id }) { sopralluogo ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { onApri(sopralluogo.id) },
+                    onClick = { onApri(sopralluogo.id, sopralluogo.tipoServizio) },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Surface(color = HaccpContainer, shape = RoundedCornerShape(20.dp)) {
+                            val isSafety = sopralluogo.tipoServizio == "SICUREZZA"
+                            Surface(color = if (isSafety) SafetyContainer else HaccpContainer, shape = RoundedCornerShape(20.dp)) {
                                 Text(
-                                    sopralluogo.tipoServizio,
-                                    color = HaccpGreen,
+                                    if (isSafety) "SICUREZZA" else sopralluogo.tipoServizio,
+                                    color = if (isSafety) SafetyOrange else HaccpGreen,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                 )
                             }

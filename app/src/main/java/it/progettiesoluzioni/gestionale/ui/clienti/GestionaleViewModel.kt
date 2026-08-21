@@ -73,6 +73,12 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun creaSopralluogoSicurezza(clienteId: Long, sedeId: Long, note: String, onCreated: (Long) -> Unit) {
+        viewModelScope.launch {
+            onCreated(repository.creaSopralluogoSicurezza(clienteId, sedeId, note))
+        }
+    }
+
     fun aggiornaVerifica(verifica: VerificaSopralluogo) {
         viewModelScope.launch { repository.aggiornaVerifica(verifica) }
     }

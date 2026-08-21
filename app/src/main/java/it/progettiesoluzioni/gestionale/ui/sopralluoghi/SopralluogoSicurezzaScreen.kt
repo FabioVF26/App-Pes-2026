@@ -47,8 +47,8 @@ import it.progettiesoluzioni.gestionale.data.model.NonConformita
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
-import it.progettiesoluzioni.gestionale.ui.theme.HaccpContainer
-import it.progettiesoluzioni.gestionale.ui.theme.HaccpGreen
+import it.progettiesoluzioni.gestionale.ui.theme.SafetyContainer
+import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -56,7 +56,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun SopralluogoHaccpScreen(
+fun SopralluogoSicurezzaScreen(
     sopralluogoId: Long,
     viewModel: GestionaleViewModel,
     onBack: () -> Unit
@@ -85,13 +85,13 @@ fun SopralluogoHaccpScreen(
                 shape = RoundedCornerShape(22.dp)
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Sopralluogo HACCP", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    Text("Sopralluogo Sicurezza", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                     Text("Verifiche completate: $complete / ${verifiche.size}", color = Color.White.copy(alpha = 0.86f))
                     Text("Non conformità rilevate: $ncCount · ancora aperte: $ncAperte", color = Color.White.copy(alpha = 0.86f))
-                    Surface(color = HaccpContainer, shape = RoundedCornerShape(18.dp)) {
+                    Surface(color = SafetyContainer, shape = RoundedCornerShape(18.dp)) {
                         Text(
                             if (sopralluogoChiuso) "SOPRALLUOGO CHIUSO" else "SOPRALLUOGO IN CORSO",
-                            color = HaccpGreen,
+                            color = SafetyOrange,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
@@ -545,7 +545,7 @@ private fun NonConformitaEditor(
                         if (stato == "CHIUSA" && dataChiusura != null) {
                             Text(
                                 "NC chiusa il ${formatDate(dataChiusura)}",
-                                color = HaccpGreen,
+                                color = SafetyOrange,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -561,7 +561,7 @@ private fun NcStatusBadge(stato: String) {
     val (label, color) = when (stato) {
         "IN_LAVORAZIONE" -> "IN CORSO" to Color(0xFFEF6C00)
         "RISOLTA" -> "RISOLTA" to Color(0xFF1565C0)
-        "CHIUSA" -> "CHIUSA" to HaccpGreen
+        "CHIUSA" -> "CHIUSA" to SafetyOrange
         else -> "APERTA" to MaterialTheme.colorScheme.error
     }
     Surface(color = color.copy(alpha = 0.12f), shape = RoundedCornerShape(16.dp)) {
