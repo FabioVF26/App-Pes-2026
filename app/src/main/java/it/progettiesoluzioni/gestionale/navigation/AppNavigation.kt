@@ -32,6 +32,9 @@ import it.progettiesoluzioni.gestionale.ui.clienti.NuovaSedeScreen
 import it.progettiesoluzioni.gestionale.ui.clienti.NuovoClienteScreen
 import it.progettiesoluzioni.gestionale.ui.common.PlaceholderScreen
 import it.progettiesoluzioni.gestionale.ui.dashboard.DashboardScreen
+import it.progettiesoluzioni.gestionale.ui.sopralluoghi.NuovoSopralluogoHaccpScreen
+import it.progettiesoluzioni.gestionale.ui.sopralluoghi.SopralluoghiScreen
+import it.progettiesoluzioni.gestionale.ui.sopralluoghi.SopralluogoHaccpScreen
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 
 private data class NavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
@@ -94,16 +97,15 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                     onClienteClick = { navController.navigate("cliente/$it") }
                 )
             }
-            composable("nuovoCliente") {
-                NuovoClienteScreen(viewModel) { navController.popBackStack() }
-            }
+            composable("nuovoCliente") { NuovoClienteScreen(viewModel) { navController.popBackStack() } }
             composable("cliente/{clienteId}") { entry ->
                 val id = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
                 ClienteDettaglioScreen(
                     clienteId = id,
                     viewModel = viewModel,
                     onModificaCliente = { navController.navigate("modificaCliente/$id") },
-                    onAggiungiSede = { navController.navigate("nuovaSede/$id") }
+                    onAggiungiSede = { navController.navigate("nuovaSede/$id") },
+                    onNuovoSopralluogoHaccp = { navController.navigate("nuovoSopralluogoHaccp/$id") }
                 )
             }
             composable("modificaCliente/{clienteId}") { entry ->
@@ -113,9 +115,7 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                     viewModel = viewModel,
                     onSaved = { navController.popBackStack() },
                     onArchived = {
-                        navController.navigate("clienti") {
-                            popUpTo("clienti") { inclusive = true }
-                        }
+                        navController.navigate("clienti") { popUpTo("clienti") { inclusive = true } }
                     }
                 )
             }
@@ -124,7 +124,29 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 NuovaSedeScreen(id, viewModel) { navController.popBackStack() }
             }
             composable("scadenze") { PlaceholderScreen("Scadenze", "Modulo predisposto per la prossima fase.") }
-            composable("sopralluoghi") { PlaceholderScreen("Sopralluoghi", "Le checklist specifiche saranno definite per HACCP, Sicurezza e GDPR.") }
+            composable("sopralluoghi") {
+                SopralluoghiScreen(
+                    viewModel = viewModel,
+                    onNuovoHaccp = { navController.navigate("nuovoSopralluogoHaccp/0") },
+                    onApri = { navController.navigate("sopralluogoHaccp/$it") }
+                )
+            }
+            composable("nuovoSopralluogoHaccp/{clienteId}") { entry ->
+                val id = entry.arguments?.getString("clienteId")?.toLongOrNull()?.takeIf { it > 0 }
+                NuovoSopralluogoHaccpScreen(
+                    viewModel = viewModel,
+                    clientePreselezionato = id,
+                    onCreated = { sopralluogoId ->
+                        navController.navigate("sopralluogoHaccp/$sopralluogoId") {
+                            popUpTo("sopralluoghi")
+                        }
+                    }
+                )
+            }
+            composable("sopralluogoHaccp/{sopralluogoId}") { entry ->
+                val id = entry.arguments?.getString("sopralluogoId")?.toLongOrNull() ?: return@composable
+                SopralluogoHaccpScreen(id, viewModel) { navController.popBackStack() }
+            }
             composable("documenti") { PlaceholderScreen("Documenti", "Archivio documentale previsto nelle prossime versioni.") }
         }
     }

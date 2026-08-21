@@ -48,7 +48,8 @@ fun ClienteDettaglioScreen(
     clienteId: Long,
     viewModel: GestionaleViewModel,
     onModificaCliente: () -> Unit,
-    onAggiungiSede: () -> Unit
+    onAggiungiSede: () -> Unit,
+    onNuovoSopralluogoHaccp: () -> Unit
 ) {
     val cliente by viewModel.cliente(clienteId).collectAsStateWithLifecycle(initialValue = null)
     val sedi by viewModel.sedi(clienteId).collectAsStateWithLifecycle(initialValue = emptyList())
@@ -168,9 +169,17 @@ fun ClienteDettaglioScreen(
                     Icon(Icons.Default.Assignment, contentDescription = null, tint = BrandNavy)
                     Text("Sopralluoghi", style = MaterialTheme.typography.titleMedium, color = BrandNavy)
                     Text(
-                        "La struttura del database è già predisposta. Le checklist HACCP, Sicurezza e GDPR saranno aggiunte con campi specifici e riferimenti normativi verificati.",
+                        "Avvia una checklist HACCP collegata al cliente e alla sede operativa, con esiti, note e gestione delle non conformità.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (cliente?.servizioHaccp == true) {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onNuovoSopralluogoHaccp
+                        ) {
+                            Text("Avvia sopralluogo HACCP")
+                        }
+                    }
                 }
             }
         }
