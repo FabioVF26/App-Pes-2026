@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette estratta dal logo Progetti e Soluzioni -->
+    <color name="brand_navy">#051443</color>
+    <color name="brand_indigo">#232E80</color>
+    <color name="brand_blue">#0F63BF</color>
+    <color name="brand_cyan">#00C0E9</color>
+    <color name="brand_gray">#878C92</color>
+    <color name="brand_gray_light">#BBC2C5</color>
+    <color name="brand_gray_lighter">#E2E2E5</color>
+    <color name="brand_white">#FFFFFF</color>
+
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
