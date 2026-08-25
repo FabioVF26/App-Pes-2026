@@ -31,3 +31,11 @@ Configurazione invariata:
 - Android SDK `platforms;android-37.0`
 - Gradle 9.5.0
 - Room 2.8.4 + KSP
+
+
+## v0.10.0 — Promemoria scadenze
+- notifiche locali automatiche a 30, 15, 7 e 1 giorno e il giorno della scadenza;
+- popup in dashboard per scadenze superate o entro 7 giorni;
+- migrazione Room 5→6 senza cancellazione dati;
+- apertura della schermata Scadenze toccando la notifica;
+- backup compatibile con il nuovo flag promemoria.

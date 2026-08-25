@@ -19,6 +19,7 @@ data class AttivitaScadenza(
     val priorita: String = "MEDIA",
     val stato: String = "DA_FARE",
     val scadenzaEpochMillis: Long? = null,
+    val promemoriaAttivo: Boolean = true,
     val creataEpochMillis: Long = System.currentTimeMillis(),
     val completataEpochMillis: Long? = null
 )

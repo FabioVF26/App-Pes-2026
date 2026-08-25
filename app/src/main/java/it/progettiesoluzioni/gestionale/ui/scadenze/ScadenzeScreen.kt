@@ -40,6 +40,7 @@ import it.progettiesoluzioni.gestionale.data.model.AttivitaScadenza
 import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -49,12 +50,16 @@ fun ScadenzeScreen(viewModel: GestionaleViewModel, onNuova: () -> Unit) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     var filtro by remember { mutableStateOf("APERTE") }
     val clientiMap = clienti.associateBy { it.id }
-    val now = System.currentTimeMillis()
+    val todayStart = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
     val filtered = items.filter {
         when (filtro) {
             "APERTE" -> it.stato != "COMPLETATA"
-            "SCADUTE" -> it.stato != "COMPLETATA" && (it.scadenzaEpochMillis ?: Long.MAX_VALUE) < now
-            "30_GG" -> it.stato != "COMPLETATA" && it.scadenzaEpochMillis?.let { d -> d >= now && d <= now + 30L * 24 * 60 * 60 * 1000 } == true
+            "SCADUTE" -> it.stato != "COMPLETATA" && (it.scadenzaEpochMillis ?: Long.MAX_VALUE) < todayStart
+            "30_GG" -> it.stato != "COMPLETATA" && it.scadenzaEpochMillis?.let { d -> d >= todayStart && d < todayStart + 31L * 24 * 60 * 60 * 1000 } == true
             "COMPLETATE" -> it.stato == "COMPLETATA"
             else -> true
         }
@@ -83,7 +88,7 @@ fun ScadenzeScreen(viewModel: GestionaleViewModel, onNuova: () -> Unit) {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
                     items(filtered, key = { it.id }) { item ->
                         val due = item.scadenzaEpochMillis
-                        val overdue = item.stato != "COMPLETATA" && due != null && due < now
+                        val overdue = item.stato != "COMPLETATA" && due != null && due < todayStart
                         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (overdue) Color(0xFFFFECEC) else MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -96,6 +101,7 @@ fun ScadenzeScreen(viewModel: GestionaleViewModel, onNuova: () -> Unit) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                                     Tag(item.servizio)
                                     Tag(item.priorita)
+                                    if (item.scadenzaEpochMillis != null && item.promemoriaAttivo) Tag("PROMEMORIA")
                                 }
                                 if (item.descrizione.isNotBlank()) Text(item.descrizione)
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

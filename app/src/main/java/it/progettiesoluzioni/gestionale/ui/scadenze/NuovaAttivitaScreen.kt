@@ -16,6 +16,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +31,7 @@ import it.progettiesoluzioni.gestionale.data.model.AttivitaScadenza
 import it.progettiesoluzioni.gestionale.data.model.Cliente
 import it.progettiesoluzioni.gestionale.ui.clienti.GestionaleViewModel
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
+import it.progettiesoluzioni.gestionale.notifications.ScadenzaScheduler
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -45,6 +47,7 @@ fun NuovaAttivitaScreen(viewModel: GestionaleViewModel, clientePreselezionato: L
     var servizio by remember { mutableStateOf(servizioPreselezionato.uppercase()) }
     var priorita by remember { mutableStateOf("MEDIA") }
     var scadenza by remember { mutableStateOf<Long?>(null) }
+    var promemoriaAttivo by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy", Locale.ITALY) }
     val risultati = if (query.length < 2 || cliente != null) emptyList() else clienti.filter { it.ragioneSociale.contains(query, true) }.take(10)
@@ -82,8 +85,30 @@ fun NuovaAttivitaScreen(viewModel: GestionaleViewModel, clientePreselezionato: L
             }) { Text(scadenza?.let { "Scadenza: ${fmt.format(Date(it))}" } ?: "Imposta scadenza") }
         }
         item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Switch(checked = promemoriaAttivo, onCheckedChange = { promemoriaAttivo = it })
+                Column {
+                    Text("Promemoria automatici", style = MaterialTheme.typography.titleSmall)
+                    Text("30, 15, 7 e 1 giorno prima, più il giorno della scadenza", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        item {
             Button(enabled = cliente != null && titolo.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = {
-                viewModel.salvaAttivita(AttivitaScadenza(clienteId = cliente!!.id, servizio = servizio, titolo = titolo.trim(), descrizione = descrizione.trim(), priorita = priorita, scadenzaEpochMillis = scadenza), onSaved)
+                viewModel.salvaAttivita(
+                    AttivitaScadenza(
+                        clienteId = cliente!!.id,
+                        servizio = servizio,
+                        titolo = titolo.trim(),
+                        descrizione = descrizione.trim(),
+                        priorita = priorita,
+                        scadenzaEpochMillis = scadenza,
+                        promemoriaAttivo = promemoriaAttivo
+                    )
+                ) {
+                    ScadenzaScheduler.controllaOra(context)
+                    onSaved()
+                }
             }) { Text("Salva attività") }
         }
     }

@@ -47,7 +47,7 @@ object BackupImporter {
                 id = o.getLong("id"), clienteId = o.getLong("clienteId"), servizio = o.optString("servizio", "GENERALE"),
                 titolo = o.getString("titolo"), descrizione = o.optString("descrizione"), priorita = o.optString("priorita", "MEDIA"),
                 stato = o.optString("stato", "DA_FARE"), scadenzaEpochMillis = o.optLongOrNull("scadenza"),
-                creataEpochMillis = o.optLong("creata", System.currentTimeMillis()), completataEpochMillis = o.optLongOrNull("completata")
+                promemoriaAttivo = o.optBoolean("promemoriaAttivo", true), creataEpochMillis = o.optLong("creata", System.currentTimeMillis()), completataEpochMillis = o.optLongOrNull("completata")
             )
         } ?: emptyList()
         val documenti = root.optJSONArray("documenti")?.mapObjects { o ->

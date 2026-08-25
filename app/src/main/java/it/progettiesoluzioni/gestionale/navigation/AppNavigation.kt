@@ -15,6 +15,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,8 +47,14 @@ import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 private data class NavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @Composable
-fun AppNavigation(viewModel: GestionaleViewModel) {
+fun AppNavigation(viewModel: GestionaleViewModel, externalRoute: String? = null, onExternalRouteConsumed: () -> Unit = {}) {
     val navController = rememberNavController()
+    LaunchedEffect(externalRoute) {
+        if (!externalRoute.isNullOrBlank()) {
+            navController.navigate(externalRoute) { launchSingleTop = true }
+            onExternalRouteConsumed()
+        }
+    }
     val bottomItems = listOf(
         NavItem("dashboard", "Home", Icons.Default.Home),
         NavItem("clienti", "Clienti", Icons.Default.People),
@@ -95,7 +102,7 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
             startDestination = "dashboard",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("dashboard") { DashboardScreen(viewModel) }
+            composable("dashboard") { DashboardScreen(viewModel, onApriScadenze = { navController.navigate("scadenze") }) }
             composable("clienti") {
                 ClientiScreen(
                     viewModel = viewModel,

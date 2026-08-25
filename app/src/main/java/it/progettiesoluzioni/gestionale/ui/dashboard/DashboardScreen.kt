@@ -56,11 +56,12 @@ import it.progettiesoluzioni.gestionale.ui.theme.SafetyContainer
 import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
 import it.progettiesoluzioni.gestionale.util.BackupExporter
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(viewModel: GestionaleViewModel) {
+fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit = {}) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     val numeroClienti by viewModel.numeroClienti.collectAsStateWithLifecycle()
     val sopralluoghi by viewModel.sopralluoghi.collectAsStateWithLifecycle()
@@ -69,6 +70,7 @@ fun DashboardScreen(viewModel: GestionaleViewModel) {
     var backupDaRipristinare by remember { mutableStateOf<Uri?>(null) }
     var messaggioBackup by remember { mutableStateOf<String?>(null) }
     var ripristinoInCorso by remember { mutableStateOf(false) }
+    var promemoriaDismissed by remember { mutableStateOf(false) }
 
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) backupDaRipristinare = uri
@@ -77,12 +79,39 @@ fun DashboardScreen(viewModel: GestionaleViewModel) {
     val haccp = clienti.count { it.servizioHaccp }
     val sicurezza = clienti.count { it.servizioSicurezza }
     val gdpr = clienti.count { it.servizioGdpr }
-    val now = System.currentTimeMillis()
-    val scadute = attivita.count { it.stato != "COMPLETATA" && it.scadenzaEpochMillis?.let { d -> d < now } == true }
-    val entro30 = attivita.count { it.stato != "COMPLETATA" && it.scadenzaEpochMillis?.let { d -> d in now..(now + 30L * 24 * 60 * 60 * 1000) } == true }
+    val todayStart = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+    val scadute = attivita.count { it.stato != "COMPLETATA" && it.scadenzaEpochMillis?.let { d -> d < todayStart } == true }
+    val entro30 = attivita.count { it.stato != "COMPLETATA" && it.scadenzaEpochMillis?.let { d -> d in todayStart until (todayStart + 31L * 24 * 60 * 60 * 1000) } == true }
+    val entro7 = attivita.count { it.stato != "COMPLETATA" && it.promemoriaAttivo && it.scadenzaEpochMillis?.let { d -> d in todayStart until (todayStart + 8L * 24 * 60 * 60 * 1000) } == true }
     val aperte = attivita.filter { it.stato != "COMPLETATA" }.take(5)
     val clientiMap = clienti.associateBy { it.id }
     val fmt = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
+
+    if (!promemoriaDismissed && (scadute > 0 || entro7 > 0)) {
+        AlertDialog(
+            onDismissRequest = { promemoriaDismissed = true },
+            title = { Text("Promemoria scadenze") },
+            text = {
+                Text(
+                    buildString {
+                        if (scadute > 0) append("$scadute scadenza/e già superata/e.")
+                        if (scadute > 0 && entro7 > 0) append("\n")
+                        if (entro7 > 0) append("$entro7 scadenza/e nei prossimi 7 giorni.")
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { promemoriaDismissed = true; onApriScadenze() }) { Text("Apri scadenze") }
+            },
+            dismissButton = {
+                TextButton(onClick = { promemoriaDismissed = true }) { Text("Chiudi") }
+            }
+        )
+    }
 
     if (backupDaRipristinare != null) {
         AlertDialog(
@@ -119,7 +148,7 @@ fun DashboardScreen(viewModel: GestionaleViewModel) {
                     Text("P&S Gestionale", style = MaterialTheme.typography.headlineMedium, color = Color.White)
                     Spacer(Modifier.height(4.dp))
                     Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
-                    Text("v0.9.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
+                    Text("v0.10.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
                 }
             }
         }
