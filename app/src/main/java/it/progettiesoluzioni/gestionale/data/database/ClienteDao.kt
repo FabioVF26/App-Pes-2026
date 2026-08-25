@@ -36,4 +36,10 @@ interface ClienteDao {
 
     @Query("SELECT * FROM clienti ORDER BY ragioneSociale ASC")
     suspend fun tuttiSnapshot(): List<Cliente>
+
+    @Insert
+    suspend fun inserisciTutti(items: List<Cliente>)
+
+    @Query("DELETE FROM clienti")
+    suspend fun eliminaTutti()
 }

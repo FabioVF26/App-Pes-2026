@@ -1,27 +1,29 @@
-# P&S Gestionale v0.8.0
+# P&S Gestionale v0.9.0
 
-Versione successiva alla v0.7.3. Il modulo Lavoratori è stato escluso su richiesta.
+Versione successiva alla v0.8.0. Il modulo Lavoratori resta escluso dalla roadmap.
 
-## Novità
-- Scadenze e attività operative collegate ai clienti.
-- Filtri: aperte, scadute, entro 30 giorni, completate, tutte.
-- Priorità e servizio (Generale, HACCP, Sicurezza, GDPR).
-- Possibilità di completare o eliminare un'attività.
-- Archivio documenti con scelta file Android, cliente, sede facoltativa, servizio, categoria, scadenza e note.
-- Apertura dei documenti registrati dall'app.
-- Schede servizio HACCP / Sicurezza / GDPR accessibili dalla scheda cliente.
-- Ogni scheda servizio riepiloga attività, documenti e sopralluoghi pertinenti.
-- Dashboard aggiornata con sopralluoghi reali, attività scadute, attività entro 30 giorni e prossime attività.
-- Esportazione backup JSON con clienti, sedi, attività, documenti, sopralluoghi, verifiche e non conformità.
-- Il backup conserva i riferimenti ai file/foto, ma non incorpora i file binari originali.
-- Migrazione Room automatica database v4 -> v5: i dati esistenti vengono mantenuti.
+## Novità principali
+- Ripristino del backup JSON direttamente dalla Dashboard.
+- Selezione del file backup con il file picker Android.
+- Verifica del formato e delle relazioni interne prima del ripristino.
+- Conferma esplicita prima di sostituire i dati presenti nell'app.
+- Ripristino transazionale di clienti, sedi, attività, documenti, sopralluoghi, verifiche e non conformità, mantenendo gli ID e le relazioni originarie.
+- In caso di file non valido il database esistente non viene modificato.
+- Le schede servizio HACCP / Sicurezza / GDPR diventano operative, con azioni rapide per nuova attività e nuovo documento.
+- Nelle schede HACCP e Sicurezza è possibile avviare direttamente un nuovo sopralluogo.
+- Le schede servizio evidenziano attività scadute e documenti con scadenza superata.
+- Lo storico sopralluoghi della scheda servizio è apribile direttamente con un tocco.
+- Creando attività o documenti dalla scheda servizio, cliente e servizio risultano già preselezionati.
+- Dashboard con versione visibile v0.9.0 e sezione dedicata Backup e ripristino.
 
-## Non incluso
-- Modulo Lavoratori (escluso dalla roadmap).
-- Ripristino automatico del backup: da implementare dopo verifica del formato di esportazione.
+## Backup: nota importante
+Il backup JSON contiene i dati gestionali e i riferimenti URI ai file/foto. PDF, immagini e documenti originali non vengono incorporati nel JSON. Dopo il ripristino i collegamenti ai file funzionano solo se le risorse originali sono ancora disponibili e accessibili sul dispositivo.
+
+## Database
+Nessuna nuova migrazione Room rispetto alla v0.8.0: lo schema resta alla versione 5.
 
 ## Build GitHub Actions
-Artifact: `PS-Gestionale-v0.8-debug`
+Artifact: `PS-Gestionale-v0.9-debug`
 
 Configurazione invariata:
 - compileSdk 37

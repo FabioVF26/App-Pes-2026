@@ -26,4 +26,10 @@ interface NonConformitaDao {
 
     @Query("SELECT * FROM non_conformita ORDER BY sopralluogoId, id")
     suspend fun tutteSnapshot(): List<NonConformita>
+
+    @Insert
+    suspend fun inserisciTutte(items: List<NonConformita>)
+
+    @Query("DELETE FROM non_conformita")
+    suspend fun eliminaTutte()
 }

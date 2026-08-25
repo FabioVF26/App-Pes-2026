@@ -23,4 +23,7 @@ interface VerificaSopralluogoDao {
 
     @Query("SELECT * FROM verifiche_sopralluogo ORDER BY sopralluogoId, ordine")
     suspend fun tutteSnapshot(): List<VerificaSopralluogo>
+
+    @Query("DELETE FROM verifiche_sopralluogo")
+    suspend fun eliminaTutte()
 }

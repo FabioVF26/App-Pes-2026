@@ -18,4 +18,6 @@ interface AttivitaScadenzaDao {
     @Query("SELECT * FROM attivita_scadenze WHERE clienteId = :clienteId ORDER BY CASE WHEN scadenzaEpochMillis IS NULL THEN 1 ELSE 0 END, scadenzaEpochMillis ASC")
     fun osservaPerCliente(clienteId: Long): Flow<List<AttivitaScadenza>>
     @Query("SELECT * FROM attivita_scadenze") suspend fun tutteSnapshot(): List<AttivitaScadenza>
+    @Insert suspend fun inserisciTutte(items: List<AttivitaScadenza>)
+    @Query("DELETE FROM attivita_scadenze") suspend fun eliminaTutte()
 }

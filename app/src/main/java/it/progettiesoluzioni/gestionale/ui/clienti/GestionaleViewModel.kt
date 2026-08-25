@@ -1,6 +1,8 @@
 package it.progettiesoluzioni.gestionale.ui.clienti
 
 import android.app.Application
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import it.progettiesoluzioni.gestionale.data.database.AppDatabase
@@ -13,6 +15,7 @@ import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import it.progettiesoluzioni.gestionale.data.repository.GestionaleRepository
 import it.progettiesoluzioni.gestionale.data.repository.MasterClientiSeed
+import it.progettiesoluzioni.gestionale.util.BackupImporter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -69,6 +72,16 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
 
     fun creaBackup(onReady: (it.progettiesoluzioni.gestionale.data.repository.BackupSnapshot) -> Unit) {
         viewModelScope.launch { onReady(repository.backupSnapshot()) }
+    }
+
+    fun ripristinaBackup(context: Context, uri: Uri, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching {
+                val snapshot = BackupImporter.leggi(context, uri)
+                repository.ripristinaBackup(snapshot)
+            }
+            onResult(result)
+        }
     }
 
     fun salvaCliente(cliente: Cliente, sede: Sede, onSaved: () -> Unit) {

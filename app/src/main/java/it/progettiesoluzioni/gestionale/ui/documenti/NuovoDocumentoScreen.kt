@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,13 +39,13 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun NuovoDocumentoScreen(viewModel: GestionaleViewModel, onSaved: () -> Unit) {
+fun NuovoDocumentoScreen(viewModel: GestionaleViewModel, clientePreselezionato: Long? = null, servizioPreselezionato: String = "GENERALE", onSaved: () -> Unit) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
     var cliente by remember { mutableStateOf<Cliente?>(null) }
     var titolo by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("Altro") }
-    var servizio by remember { mutableStateOf("GENERALE") }
+    var servizio by remember { mutableStateOf(servizioPreselezionato.uppercase()) }
     var note by remember { mutableStateOf("") }
     var uri by remember { mutableStateOf<Uri?>(null) }
     var scadenza by remember { mutableStateOf<Long?>(null) }
@@ -60,6 +61,12 @@ fun NuovoDocumentoScreen(viewModel: GestionaleViewModel, onSaved: () -> Unit) {
     }
     val risultati = if (query.length < 2 || cliente != null) emptyList() else clienti.filter { it.ragioneSociale.contains(query, true) }.take(10)
     val sedi = if (cliente != null) viewModel.sedi(cliente!!.id).collectAsStateWithLifecycle(initialValue = emptyList()).value else emptyList()
+
+    LaunchedEffect(clienti, clientePreselezionato) {
+        if (cliente == null && clientePreselezionato != null) {
+            clienti.firstOrNull { it.id == clientePreselezionato }?.let { c -> cliente = c; query = c.ragioneSociale }
+        }
+    }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Aggiungi documento", style = MaterialTheme.typography.headlineSmall, color = BrandNavy) }

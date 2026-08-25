@@ -16,4 +16,6 @@ interface DocumentoClienteDao {
     @Query("SELECT * FROM documenti_cliente ORDER BY creatoEpochMillis DESC") fun osservaTutti(): Flow<List<DocumentoCliente>>
     @Query("SELECT * FROM documenti_cliente WHERE clienteId = :clienteId ORDER BY creatoEpochMillis DESC") fun osservaPerCliente(clienteId: Long): Flow<List<DocumentoCliente>>
     @Query("SELECT * FROM documenti_cliente") suspend fun tuttiSnapshot(): List<DocumentoCliente>
+    @Insert suspend fun inserisciTutti(items: List<DocumentoCliente>)
+    @Query("DELETE FROM documenti_cliente") suspend fun eliminaTutti()
 }

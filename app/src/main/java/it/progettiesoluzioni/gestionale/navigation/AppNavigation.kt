@@ -135,8 +135,12 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 val id = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
                 NuovaSedeScreen(id, viewModel) { navController.popBackStack() }
             }
-            composable("scadenze") { ScadenzeScreen(viewModel, onNuova = { navController.navigate("nuovaAttivita") }) }
-            composable("nuovaAttivita") { NuovaAttivitaScreen(viewModel) { navController.popBackStack() } }
+            composable("scadenze") { ScadenzeScreen(viewModel, onNuova = { navController.navigate("nuovaAttivita/0/GENERALE") }) }
+            composable("nuovaAttivita/{clienteId}/{servizio}") { entry ->
+                val clienteId = entry.arguments?.getString("clienteId")?.toLongOrNull()?.takeIf { it > 0 }
+                val servizio = entry.arguments?.getString("servizio") ?: "GENERALE"
+                NuovaAttivitaScreen(viewModel, clientePreselezionato = clienteId, servizioPreselezionato = servizio) { navController.popBackStack() }
+            }
             composable("sopralluoghi") {
                 SopralluoghiScreen(
                     viewModel = viewModel,
@@ -182,12 +186,31 @@ fun AppNavigation(viewModel: GestionaleViewModel) {
                 SopralluogoSicurezzaScreen(id, viewModel) { navController.popBackStack() }
             }
 
-            composable("documenti") { DocumentiScreen(viewModel, onNuovo = { navController.navigate("nuovoDocumento") }) }
-            composable("nuovoDocumento") { NuovoDocumentoScreen(viewModel) { navController.popBackStack() } }
+            composable("documenti") { DocumentiScreen(viewModel, onNuovo = { navController.navigate("nuovoDocumento/0/GENERALE") }) }
+            composable("nuovoDocumento/{clienteId}/{servizio}") { entry ->
+                val clienteId = entry.arguments?.getString("clienteId")?.toLongOrNull()?.takeIf { it > 0 }
+                val servizio = entry.arguments?.getString("servizio") ?: "GENERALE"
+                NuovoDocumentoScreen(viewModel, clientePreselezionato = clienteId, servizioPreselezionato = servizio) { navController.popBackStack() }
+            }
             composable("servizio/{clienteId}/{tipo}") { entry ->
                 val clienteId = entry.arguments?.getString("clienteId")?.toLongOrNull() ?: return@composable
                 val tipo = entry.arguments?.getString("tipo") ?: return@composable
-                ServizioClienteScreen(clienteId, tipo, viewModel)
+                ServizioClienteScreen(
+                    clienteId = clienteId,
+                    tipo = tipo,
+                    viewModel = viewModel,
+                    onNuovaAttivita = { navController.navigate("nuovaAttivita/$clienteId/$tipo") },
+                    onNuovoDocumento = { navController.navigate("nuovoDocumento/$clienteId/$tipo") },
+                    onNuovoSopralluogo = when (tipo.uppercase()) {
+                        "HACCP" -> ({ navController.navigate("nuovoSopralluogoHaccp/$clienteId") })
+                        "SICUREZZA" -> ({ navController.navigate("nuovoSopralluogoSicurezza/$clienteId") })
+                        else -> null
+                    },
+                    onApriSopralluogo = { idSopralluogo, servizio ->
+                        if (servizio == "SICUREZZA") navController.navigate("sopralluogoSicurezza/$idSopralluogo")
+                        else navController.navigate("sopralluogoHaccp/$idSopralluogo")
+                    }
+                )
             }
         }
     }

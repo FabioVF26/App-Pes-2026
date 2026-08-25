@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,18 +36,24 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun NuovaAttivitaScreen(viewModel: GestionaleViewModel, onSaved: () -> Unit) {
+fun NuovaAttivitaScreen(viewModel: GestionaleViewModel, clientePreselezionato: Long? = null, servizioPreselezionato: String = "GENERALE", onSaved: () -> Unit) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
     var cliente by remember { mutableStateOf<Cliente?>(null) }
     var titolo by remember { mutableStateOf("") }
     var descrizione by remember { mutableStateOf("") }
-    var servizio by remember { mutableStateOf("GENERALE") }
+    var servizio by remember { mutableStateOf(servizioPreselezionato.uppercase()) }
     var priorita by remember { mutableStateOf("MEDIA") }
     var scadenza by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy", Locale.ITALY) }
     val risultati = if (query.length < 2 || cliente != null) emptyList() else clienti.filter { it.ragioneSociale.contains(query, true) }.take(10)
+
+    LaunchedEffect(clienti, clientePreselezionato) {
+        if (cliente == null && clientePreselezionato != null) {
+            clienti.firstOrNull { it.id == clientePreselezionato }?.let { c -> cliente = c; query = c.ragioneSociale }
+        }
+    }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Nuova attività / scadenza", style = MaterialTheme.typography.headlineSmall, color = BrandNavy) }

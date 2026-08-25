@@ -29,4 +29,10 @@ interface SopralluogoDao {
 
     @Query("SELECT * FROM sopralluoghi ORDER BY dataOraEpochMillis DESC")
     suspend fun tuttiSnapshot(): List<Sopralluogo>
+
+    @Insert
+    suspend fun inserisciTutti(items: List<Sopralluogo>)
+
+    @Query("DELETE FROM sopralluoghi")
+    suspend fun eliminaTutti()
 }

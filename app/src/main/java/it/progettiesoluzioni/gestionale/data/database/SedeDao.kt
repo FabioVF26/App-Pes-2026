@@ -27,4 +27,10 @@ interface SedeDao {
 
     @Query("SELECT * FROM sedi ORDER BY clienteId, principale DESC, nome")
     suspend fun tutteSnapshot(): List<Sede>
+
+    @Insert
+    suspend fun inserisciTutte(items: List<Sede>)
+
+    @Query("DELETE FROM sedi")
+    suspend fun eliminaTutte()
 }

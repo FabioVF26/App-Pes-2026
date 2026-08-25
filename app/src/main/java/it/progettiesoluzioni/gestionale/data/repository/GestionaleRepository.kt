@@ -113,6 +113,26 @@ class GestionaleRepository(private val db: AppDatabase) {
         nonConformita = db.nonConformitaDao().tutteSnapshot()
     )
 
+    suspend fun ripristinaBackup(snapshot: BackupSnapshot) = db.withTransaction {
+        // Cancellazione in ordine inverso rispetto alle dipendenze FK.
+        db.nonConformitaDao().eliminaTutte()
+        db.verificaSopralluogoDao().eliminaTutte()
+        db.sopralluogoDao().eliminaTutti()
+        db.documentoClienteDao().eliminaTutti()
+        db.attivitaScadenzaDao().eliminaTutte()
+        db.sedeDao().eliminaTutte()
+        db.clienteDao().eliminaTutti()
+
+        // Ripristino mantenendo gli ID originali per conservare tutte le relazioni.
+        if (snapshot.clienti.isNotEmpty()) db.clienteDao().inserisciTutti(snapshot.clienti)
+        if (snapshot.sedi.isNotEmpty()) db.sedeDao().inserisciTutte(snapshot.sedi)
+        if (snapshot.attivita.isNotEmpty()) db.attivitaScadenzaDao().inserisciTutte(snapshot.attivita)
+        if (snapshot.documenti.isNotEmpty()) db.documentoClienteDao().inserisciTutti(snapshot.documenti)
+        if (snapshot.sopralluoghi.isNotEmpty()) db.sopralluogoDao().inserisciTutti(snapshot.sopralluoghi)
+        if (snapshot.verifiche.isNotEmpty()) db.verificaSopralluogoDao().inserisciTutte(snapshot.verifiche)
+        if (snapshot.nonConformita.isNotEmpty()) db.nonConformitaDao().inserisciTutte(snapshot.nonConformita)
+    }
+
     suspend fun creaSopralluogoHaccp(clienteId: Long, sedeId: Long, note: String): Long = db.withTransaction {
         val id = db.sopralluogoDao().inserisci(
             Sopralluogo(

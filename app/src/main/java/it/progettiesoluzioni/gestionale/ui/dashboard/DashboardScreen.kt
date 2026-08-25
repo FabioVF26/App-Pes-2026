@@ -1,6 +1,9 @@
 package it.progettiesoluzioni.gestionale.ui.dashboard
 
 import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,16 +22,23 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -56,6 +66,14 @@ fun DashboardScreen(viewModel: GestionaleViewModel) {
     val sopralluoghi by viewModel.sopralluoghi.collectAsStateWithLifecycle()
     val attivita by viewModel.attivitaScadenze.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var backupDaRipristinare by remember { mutableStateOf<Uri?>(null) }
+    var messaggioBackup by remember { mutableStateOf<String?>(null) }
+    var ripristinoInCorso by remember { mutableStateOf(false) }
+
+    val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) backupDaRipristinare = uri
+    }
+
     val haccp = clienti.count { it.servizioHaccp }
     val sicurezza = clienti.count { it.servizioSicurezza }
     val gdpr = clienti.count { it.servizioGdpr }
@@ -66,12 +84,42 @@ fun DashboardScreen(viewModel: GestionaleViewModel) {
     val clientiMap = clienti.associateBy { it.id }
     val fmt = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
 
+    if (backupDaRipristinare != null) {
+        AlertDialog(
+            onDismissRequest = { if (!ripristinoInCorso) backupDaRipristinare = null },
+            title = { Text("Ripristinare il backup?") },
+            text = {
+                Text(
+                    "Il ripristino sostituirà tutti i dati gestionali attualmente presenti nell'app con quelli contenuti nel backup selezionato. " +
+                        "Clienti, sedi, scadenze, documenti, sopralluoghi e non conformità attuali verranno sovrascritti."
+                )
+            },
+            confirmButton = {
+                TextButton(enabled = !ripristinoInCorso, onClick = {
+                    val uri = backupDaRipristinare ?: return@TextButton
+                    ripristinoInCorso = true
+                    viewModel.ripristinaBackup(context, uri) { result ->
+                        ripristinoInCorso = false
+                        backupDaRipristinare = null
+                        messaggioBackup = result.fold(
+                            onSuccess = { "Backup ripristinato correttamente." },
+                            onFailure = { "Ripristino non riuscito: ${it.message ?: "file non valido"}" }
+                        )
+                    }
+                }) { Text(if (ripristinoInCorso) "Ripristino..." else "Ripristina") }
+            },
+            dismissButton = { TextButton(enabled = !ripristinoInCorso, onClick = { backupDaRipristinare = null }) { Text("Annulla") } }
+        )
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Surface(modifier = Modifier.fillMaxWidth(), color = BrandNavy, shape = RoundedCornerShape(24.dp), shadowElevation = 3.dp) {
                 Column(Modifier.padding(22.dp)) {
                     Text("P&S Gestionale", style = MaterialTheme.typography.headlineMedium, color = Color.White)
-                    Spacer(Modifier.height(4.dp)); Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+                    Spacer(Modifier.height(4.dp))
+                    Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+                    Text("v0.9.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
                 }
             }
         }
@@ -84,25 +132,58 @@ fun DashboardScreen(viewModel: GestionaleViewModel) {
         if (aperte.isEmpty()) item { Text("Nessuna attività aperta.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(aperte, key = { it.id }) { a ->
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(16.dp)) {
-                Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(a.titolo, style = MaterialTheme.typography.titleMedium); Text(clientiMap[a.clienteId]?.ragioneSociale ?: "Cliente", color = MaterialTheme.colorScheme.onSurfaceVariant); Text(a.scadenzaEpochMillis?.let { "Scadenza ${fmt.format(Date(it))}" } ?: "Senza scadenza", style = MaterialTheme.typography.labelMedium) }
+                Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(a.titolo, style = MaterialTheme.typography.titleMedium)
+                    Text(clientiMap[a.clienteId]?.ragioneSociale ?: "Cliente", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(a.scadenzaEpochMillis?.let { "Scadenza ${fmt.format(Date(it))}" } ?: "Senza scadenza", style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
+        item { Text("Backup e ripristino", style = MaterialTheme.typography.titleLarge, color = BrandNavy) }
         item {
             Button(modifier = Modifier.fillMaxWidth(), onClick = {
                 viewModel.creaBackup { snapshot ->
                     val uri = BackupExporter.creaBackup(context, snapshot)
-                    val intent = Intent(Intent.ACTION_SEND).apply { type = "application/json"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); putExtra(Intent.EXTRA_SUBJECT, "Backup P&S Gestionale") }
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        putExtra(Intent.EXTRA_SUBJECT, "Backup P&S Gestionale")
+                    }
                     context.startActivity(Intent.createChooser(intent, "Esporta backup dati"))
                 }
             }) { Icon(Icons.Default.Backup, contentDescription = null); Text("  Esporta backup dati") }
         }
-        item { Text("Il backup esporta anagrafiche, sedi, attività, metadati documenti e sopralluoghi. I file documentali originali non sono incorporati.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item {
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { restorePicker.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
+                Icon(Icons.Default.Restore, contentDescription = null)
+                Text("  Ripristina backup")
+            }
+        }
+        messaggioBackup?.let { msg ->
+            item {
+                Surface(color = if (msg.startsWith("Backup ripristinato")) Color(0xFFEAF5EA) else Color(0xFFFFE8E8), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Text(msg, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        item {
+            Text(
+                "Il ripristino sostituisce i dati gestionali con quelli del backup. I riferimenti a PDF, documenti e fotografie vengono ripristinati, ma i file originali devono essere ancora disponibili sul dispositivo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 @Composable
 private fun StatCard(title: String, value: String, icon: ImageVector, accent: Color, container: Color, modifier: Modifier = Modifier) {
     Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = container), shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Icon(icon, contentDescription = null, tint = accent); Text(title, style = MaterialTheme.typography.labelLarge, color = accent); Text(value, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface) }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, contentDescription = null, tint = accent)
+            Text(title, style = MaterialTheme.typography.labelLarge, color = accent)
+            Text(value, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        }
     }
 }
