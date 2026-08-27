@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Restore
@@ -152,7 +153,7 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
                         Text("v0.11.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
                     }
                     androidx.compose.material3.IconButton(onClick = onLogout) {
-                        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci", tint = Color.White.copy(alpha = 0.85f))
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Esci", tint = Color.White.copy(alpha = 0.85f))
                     }
                 }
             }
