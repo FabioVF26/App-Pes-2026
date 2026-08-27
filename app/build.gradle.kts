@@ -13,8 +13,8 @@ android {
         applicationId = "it.progettiesoluzioni.gestionale"
         minSdk = 26
         targetSdk = 37
-        versionCode = 15
-        versionName = "0.10.0"
+        versionCode = 16
+        versionName = "0.11.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -68,8 +68,7 @@ dependencies {
 
     val firebaseBom = platform("com.google.firebase:firebase-bom:34.18.0")
     implementation(firebaseBom)
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-auth")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

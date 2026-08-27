@@ -33,6 +33,17 @@ Configurazione invariata:
 - Room 2.8.4 + KSP
 
 
+
+## v0.11.0 — Firebase Authentication
+
+- accesso con email/password tramite Firebase Authentication;
+- recupero password via email;
+- registrazione libera rimossa: gli account vengono creati/abilitati dall’amministratore;
+- dipendenza aggiornata a `firebase-auth` (modulo principale, senza `-ktx`);
+- Firestore rimosso finché non viene realmente utilizzato;
+- gestione errori basata sulle eccezioni Firebase;
+- versione applicazione `0.11.0` (`versionCode 16`).
+
 ## v0.10.0 — Promemoria scadenze
 - notifiche locali automatiche a 30, 15, 7 e 1 giorno e il giorno della scadenza;
 - popup in dashboard per scadenze superate o entro 7 giorni;

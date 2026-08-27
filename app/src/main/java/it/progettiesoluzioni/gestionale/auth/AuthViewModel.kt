@@ -37,28 +37,9 @@ class AuthViewModel(
             _uiState.value = _uiState.value.copy(errore = "Inserisci email e password.")
             return
         }
-        _uiState.value = _uiState.value.copy(caricamento = true, errore = null)
+        _uiState.value = _uiState.value.copy(caricamento = true, errore = null, emailResetInviata = false)
         viewModelScope.launch {
             val result = repository.accedi(email.trim(), password)
-            _uiState.value = result.fold(
-                onSuccess = { AuthUiState() },
-                onFailure = { AuthUiState(errore = repository.messaggioErrore(it)) }
-            )
-        }
-    }
-
-    fun registra(email: String, password: String, confermaPassword: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.value = _uiState.value.copy(errore = "Inserisci email e password.")
-            return
-        }
-        if (password != confermaPassword) {
-            _uiState.value = _uiState.value.copy(errore = "Le password non coincidono.")
-            return
-        }
-        _uiState.value = _uiState.value.copy(caricamento = true, errore = null)
-        viewModelScope.launch {
-            val result = repository.registra(email.trim(), password)
             _uiState.value = result.fold(
                 onSuccess = { AuthUiState() },
                 onFailure = { AuthUiState(errore = repository.messaggioErrore(it)) }
@@ -71,7 +52,7 @@ class AuthViewModel(
             _uiState.value = _uiState.value.copy(errore = "Inserisci l'email per ricevere il link di reset.")
             return
         }
-        _uiState.value = _uiState.value.copy(caricamento = true, errore = null)
+        _uiState.value = _uiState.value.copy(caricamento = true, errore = null, emailResetInviata = false)
         viewModelScope.launch {
             val result = repository.inviaResetPassword(email.trim())
             _uiState.value = result.fold(
@@ -87,5 +68,9 @@ class AuthViewModel(
 
     fun consumaErrore() {
         _uiState.value = _uiState.value.copy(errore = null)
+    }
+
+    fun consumaMessaggioReset() {
+        _uiState.value = _uiState.value.copy(emailResetInviata = false)
     }
 }

@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +25,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,9 +41,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 
-private enum class ModalitaLogin { ACCEDI, REGISTRATI, RESET_PASSWORD }
+private enum class ModalitaLogin { ACCEDI, RESET_PASSWORD }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(viewModel: AuthViewModel) {
     val uiState by viewModel.uiState.collectAsState()
@@ -53,14 +50,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
     var modalita by rememberSaveable { mutableStateOf(ModalitaLogin.ACCEDI) }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    var confermaPassword by rememberSaveable { mutableStateOf("") }
     var passwordVisibile by remember { mutableStateOf(false) }
-
-    LaunchedEffect(uiState.emailResetInviata) {
-        if (uiState.emailResetInviata) {
-            modalita = ModalitaLogin.ACCEDI
-        }
-    }
 
     Scaffold { padding ->
         Column(
@@ -89,11 +79,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
                 color = BrandNavy
             )
             Text(
-                text = when (modalita) {
-                    ModalitaLogin.ACCEDI -> "Accedi al gestionale"
-                    ModalitaLogin.REGISTRATI -> "Crea un nuovo account"
-                    ModalitaLogin.RESET_PASSWORD -> "Recupera la password"
-                },
+                text = if (modalita == ModalitaLogin.ACCEDI) "Accedi al gestionale" else "Recupera la password",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -109,7 +95,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (modalita != ModalitaLogin.RESET_PASSWORD) {
+            if (modalita == ModalitaLogin.ACCEDI) {
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = password,
@@ -122,23 +108,10 @@ fun LoginScreen(viewModel: AuthViewModel) {
                         IconButton(onClick = { passwordVisibile = !passwordVisibile }) {
                             Icon(
                                 imageVector = if (passwordVisibile) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null
+                                contentDescription = if (passwordVisibile) "Nascondi password" else "Mostra password"
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            if (modalita == ModalitaLogin.REGISTRATI) {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = confermaPassword,
-                    onValueChange = { confermaPassword = it },
-                    label = { Text("Conferma password") },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisibile) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -154,7 +127,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
 
             if (uiState.emailResetInviata) {
                 Text(
-                    text = "Ti abbiamo inviato un'email per reimpostare la password.",
+                    text = "Email di recupero inviata. Controlla la posta e segui il link ricevuto.",
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 12.dp)
@@ -165,11 +138,8 @@ fun LoginScreen(viewModel: AuthViewModel) {
 
             Button(
                 onClick = {
-                    when (modalita) {
-                        ModalitaLogin.ACCEDI -> viewModel.accedi(email, password)
-                        ModalitaLogin.REGISTRATI -> viewModel.registra(email, password, confermaPassword)
-                        ModalitaLogin.RESET_PASSWORD -> viewModel.inviaResetPassword(email)
-                    }
+                    if (modalita == ModalitaLogin.ACCEDI) viewModel.accedi(email, password)
+                    else viewModel.inviaResetPassword(email)
                 },
                 enabled = !uiState.caricamento,
                 modifier = Modifier
@@ -179,48 +149,33 @@ fun LoginScreen(viewModel: AuthViewModel) {
                 if (uiState.caricamento) {
                     CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(
-                        when (modalita) {
-                            ModalitaLogin.ACCEDI -> "Accedi"
-                            ModalitaLogin.REGISTRATI -> "Registrati"
-                            ModalitaLogin.RESET_PASSWORD -> "Invia email di recupero"
-                        }
-                    )
+                    Text(if (modalita == ModalitaLogin.ACCEDI) "Accedi" else "Invia email di recupero")
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            when (modalita) {
-                ModalitaLogin.ACCEDI -> {
-                    TextButton(onClick = {
-                        viewModel.consumaErrore()
-                        modalita = ModalitaLogin.RESET_PASSWORD
-                    }) {
-                        Text("Password dimenticata?")
-                    }
-                    TextButton(onClick = {
-                        viewModel.consumaErrore()
-                        modalita = ModalitaLogin.REGISTRATI
-                    }) {
-                        Text("Non hai un account? Registrati")
-                    }
+            if (modalita == ModalitaLogin.ACCEDI) {
+                TextButton(onClick = {
+                    viewModel.consumaErrore()
+                    viewModel.consumaMessaggioReset()
+                    modalita = ModalitaLogin.RESET_PASSWORD
+                }) {
+                    Text("Password dimenticata?")
                 }
-                ModalitaLogin.REGISTRATI -> {
-                    TextButton(onClick = {
-                        viewModel.consumaErrore()
-                        modalita = ModalitaLogin.ACCEDI
-                    }) {
-                        Text("Hai gia' un account? Accedi")
-                    }
-                }
-                ModalitaLogin.RESET_PASSWORD -> {
-                    TextButton(onClick = {
-                        viewModel.consumaErrore()
-                        modalita = ModalitaLogin.ACCEDI
-                    }) {
-                        Text("Torna al login")
-                    }
+                Text(
+                    text = "Gli account sono abilitati dall'amministratore.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            } else {
+                TextButton(onClick = {
+                    viewModel.consumaErrore()
+                    modalita = ModalitaLogin.ACCEDI
+                }) {
+                    Text("Torna al login")
                 }
             }
         }

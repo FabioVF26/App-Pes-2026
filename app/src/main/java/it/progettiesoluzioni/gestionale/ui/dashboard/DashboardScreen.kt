@@ -149,7 +149,7 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
                         Text("P&S Gestionale", style = MaterialTheme.typography.headlineMedium, color = Color.White)
                         Spacer(Modifier.height(4.dp))
                         Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
-                        Text("v0.10.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
+                        Text("v0.11.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
                     }
                     androidx.compose.material3.IconButton(onClick = onLogout) {
                         Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci", tint = Color.White.copy(alpha = 0.85f))
