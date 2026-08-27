@@ -9,12 +9,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.progettiesoluzioni.gestionale.auth.AuthViewModel
+import it.progettiesoluzioni.gestionale.auth.LoginScreen
 import it.progettiesoluzioni.gestionale.navigation.AppNavigation
 import it.progettiesoluzioni.gestionale.notifications.NotificationHelper
 import it.progettiesoluzioni.gestionale.notifications.ScadenzaScheduler
@@ -47,13 +50,21 @@ class MainActivity : ComponentActivity() {
                 if (mostraSplash) {
                     SplashScreen()
                 } else {
-                    val gestionaleViewModel: GestionaleViewModel = viewModel()
-                    val route by externalRoute
-                    AppNavigation(
-                        viewModel = gestionaleViewModel,
-                        externalRoute = route,
-                        onExternalRouteConsumed = { externalRoute.value = null }
-                    )
+                    val authViewModel: AuthViewModel = viewModel()
+                    val utente by authViewModel.utenteCorrente.collectAsState()
+
+                    if (utente == null) {
+                        LoginScreen(viewModel = authViewModel)
+                    } else {
+                        val gestionaleViewModel: GestionaleViewModel = viewModel()
+                        val route by externalRoute
+                        AppNavigation(
+                            viewModel = gestionaleViewModel,
+                            externalRoute = route,
+                            onExternalRouteConsumed = { externalRoute.value = null },
+                            onLogout = { authViewModel.disconnetti() }
+                        )
+                    }
                 }
             }
         }

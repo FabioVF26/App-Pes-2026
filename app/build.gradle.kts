@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -64,6 +65,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     ksp("androidx.room:room-compiler:2.8.4")
+
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.18.0")
+    implementation(firebaseBom)
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

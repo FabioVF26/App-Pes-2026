@@ -61,7 +61,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit = {}) {
+fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit = {}, onLogout: () -> Unit = {}) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     val numeroClienti by viewModel.numeroClienti.collectAsStateWithLifecycle()
     val sopralluoghi by viewModel.sopralluoghi.collectAsStateWithLifecycle()
@@ -144,11 +144,16 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Surface(modifier = Modifier.fillMaxWidth(), color = BrandNavy, shape = RoundedCornerShape(24.dp), shadowElevation = 3.dp) {
-                Column(Modifier.padding(22.dp)) {
-                    Text("P&S Gestionale", style = MaterialTheme.typography.headlineMedium, color = Color.White)
-                    Spacer(Modifier.height(4.dp))
-                    Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
-                    Text("v0.10.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.padding(22.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.Top) {
+                    Column(Modifier.weight(1f)) {
+                        Text("P&S Gestionale", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+                        Spacer(Modifier.height(4.dp))
+                        Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+                        Text("v0.10.0", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
+                    }
+                    androidx.compose.material3.IconButton(onClick = onLogout) {
+                        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci", tint = Color.White.copy(alpha = 0.85f))
+                    }
                 }
             }
         }

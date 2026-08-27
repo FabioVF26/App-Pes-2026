@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "114428525082",
+    "project_id": "app-pes-2026",
+    "storage_bucket": "app-pes-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:114428525082:android:f245c9f4569522ed1defa3",
+        "android_client_info": {
+          "package_name": "it.progettiesoluzioni.gestionale"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQnD4a4GdpsblDxoC6E0eWwy-DzwSxrNQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

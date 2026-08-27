@@ -47,7 +47,7 @@ import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 private data class NavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @Composable
-fun AppNavigation(viewModel: GestionaleViewModel, externalRoute: String? = null, onExternalRouteConsumed: () -> Unit = {}) {
+fun AppNavigation(viewModel: GestionaleViewModel, externalRoute: String? = null, onExternalRouteConsumed: () -> Unit = {}, onLogout: () -> Unit = {}) {
     val navController = rememberNavController()
     LaunchedEffect(externalRoute) {
         if (!externalRoute.isNullOrBlank()) {
@@ -102,7 +102,7 @@ fun AppNavigation(viewModel: GestionaleViewModel, externalRoute: String? = null,
             startDestination = "dashboard",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("dashboard") { DashboardScreen(viewModel, onApriScadenze = { navController.navigate("scadenze") }) }
+            composable("dashboard") { DashboardScreen(viewModel, onApriScadenze = { navController.navigate("scadenze") }, onLogout = onLogout) }
             composable("clienti") {
                 ClientiScreen(
                     viewModel = viewModel,
