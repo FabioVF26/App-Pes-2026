@@ -12,6 +12,7 @@ import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import it.progettiesoluzioni.gestionale.data.repository.BackupSnapshot
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 object BackupImporter {
     fun leggi(context: Context, uri: Uri): BackupSnapshot {
@@ -20,11 +21,25 @@ object BackupImporter {
         val root = JSONObject(text)
         require(root.optString("formato") == "P&S Gestionale backup") { "Il file non è un backup P&S Gestionale valido" }
         val versione = root.optInt("versione", 0)
-        require(versione in 1..1) { "Versione backup non supportata: $versione" }
+        require(versione in 1..2) { "Versione backup non supportata: $versione" }
+
+        // Nei backup v1 gli ID erano numerici (Long); da v2 sono testuali (UUID).
+        // In entrambi i casi costruiamo qui una mappa "chiave originale -> UUID definitivo":
+        // per i v2 l'UUID e' gia' quello scritto nel file, per i v1 ne generiamo uno nuovo,
+        // cosi' tutte le relazioni vengono preservate senza possibilita' di collisione.
+        val idMap = HashMap<String, String>()
+        fun risolviId(o: JSONObject, campo: String): String {
+            val chiaveOriginale = o.get(campo).toString()
+            return idMap.getOrPut(chiaveOriginale) { if (versione >= 2) chiaveOriginale else UUID.randomUUID().toString() }
+        }
+        fun risolviIdOpzionale(o: JSONObject, campo: String): String? {
+            if (!o.has(campo) || o.isNull(campo)) return null
+            return risolviId(o, campo)
+        }
 
         val clienti = root.getJSONArray("clienti").mapObjects { o ->
             Cliente(
-                id = o.getLong("id"), ragioneSociale = o.getString("ragioneSociale"),
+                id = risolviId(o, "id"), ragioneSociale = o.getString("ragioneSociale"),
                 nomeCommerciale = o.optString("nomeCommerciale"), partitaIva = o.optString("partitaIva"),
                 codiceFiscale = o.optString("codiceFiscale"), codiceAteco = o.optString("codiceAteco"),
                 attivita = o.optString("attivita"), legaleRappresentante = o.optString("legaleRappresentante"),
@@ -36,7 +51,7 @@ object BackupImporter {
         }
         val sedi = root.getJSONArray("sedi").mapObjects { o ->
             Sede(
-                id = o.getLong("id"), clienteId = o.getLong("clienteId"), nome = o.optString("nome", "Sede principale"),
+                id = risolviId(o, "id"), clienteId = risolviId(o, "clienteId"), nome = o.optString("nome", "Sede principale"),
                 indirizzo = o.optString("indirizzo"), civico = o.optString("civico"), cap = o.optString("cap"),
                 comune = o.optString("comune"), provincia = o.optString("provincia"), note = o.optString("note"),
                 principale = o.optBoolean("principale", false)
@@ -44,7 +59,7 @@ object BackupImporter {
         }
         val attivita = root.optJSONArray("attivitaScadenze")?.mapObjects { o ->
             AttivitaScadenza(
-                id = o.getLong("id"), clienteId = o.getLong("clienteId"), servizio = o.optString("servizio", "GENERALE"),
+                id = risolviId(o, "id"), clienteId = risolviId(o, "clienteId"), servizio = o.optString("servizio", "GENERALE"),
                 titolo = o.getString("titolo"), descrizione = o.optString("descrizione"), priorita = o.optString("priorita", "MEDIA"),
                 stato = o.optString("stato", "DA_FARE"), scadenzaEpochMillis = o.optLongOrNull("scadenza"),
                 promemoriaAttivo = o.optBoolean("promemoriaAttivo", true), creataEpochMillis = o.optLong("creata", System.currentTimeMillis()), completataEpochMillis = o.optLongOrNull("completata")
@@ -52,7 +67,7 @@ object BackupImporter {
         } ?: emptyList()
         val documenti = root.optJSONArray("documenti")?.mapObjects { o ->
             DocumentoCliente(
-                id = o.getLong("id"), clienteId = o.getLong("clienteId"), sedeId = o.optLongOrNull("sedeId"),
+                id = risolviId(o, "id"), clienteId = risolviId(o, "clienteId"), sedeId = risolviIdOpzionale(o, "sedeId"),
                 servizio = o.optString("servizio", "GENERALE"), categoria = o.optString("categoria", "Altro"), titolo = o.getString("titolo"),
                 uri = o.optString("uri"), dataDocumentoEpochMillis = o.optLongOrNull("dataDocumento"),
                 scadenzaEpochMillis = o.optLongOrNull("scadenza"), note = o.optString("note"),
@@ -61,21 +76,21 @@ object BackupImporter {
         } ?: emptyList()
         val sopralluoghi = root.optJSONArray("sopralluoghi")?.mapObjects { o ->
             Sopralluogo(
-                id = o.getLong("id"), clienteId = o.getLong("clienteId"), sedeId = o.getLong("sedeId"),
+                id = risolviId(o, "id"), clienteId = risolviId(o, "clienteId"), sedeId = risolviId(o, "sedeId"),
                 tipoServizio = o.getString("tipoServizio"), dataOraEpochMillis = o.getLong("dataOra"),
                 stato = o.optString("stato", "BOZZA"), noteGenerali = o.optString("noteGenerali")
             )
         } ?: emptyList()
         val verifiche = root.optJSONArray("verificheSopralluogo")?.mapObjects { o ->
             VerificaSopralluogo(
-                id = o.getLong("id"), sopralluogoId = o.getLong("sopralluogoId"), codice = o.getString("codice"),
+                id = risolviId(o, "id"), sopralluogoId = risolviId(o, "sopralluogoId"), codice = o.getString("codice"),
                 sezione = o.optString("sezione"), titolo = o.getString("titolo"), riferimentoNormativo = o.optString("riferimentoNormativo"),
                 esito = o.optString("esito", "DA_VERIFICARE"), note = o.optString("note"), ordine = o.optInt("ordine", 0)
             )
         } ?: emptyList()
         val nonConformita = root.optJSONArray("nonConformita")?.mapObjects { o ->
             NonConformita(
-                id = o.getLong("id"), sopralluogoId = o.getLong("sopralluogoId"), verificaId = o.getLong("verificaId"),
+                id = risolviId(o, "id"), sopralluogoId = risolviId(o, "sopralluogoId"), verificaId = risolviId(o, "verificaId"),
                 descrizione = o.optString("descrizione"), azioneRichiesta = o.optString("azioneRichiesta"),
                 sanzionePossibile = o.optString("sanzionePossibile"), priorita = o.optString("priorita", "MEDIA"),
                 stato = o.optString("stato", "APERTA"), termineEpochMillis = o.optLongOrNull("termine"),

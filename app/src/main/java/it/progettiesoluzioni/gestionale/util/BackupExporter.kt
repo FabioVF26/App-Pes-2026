@@ -14,7 +14,7 @@ object BackupExporter {
     fun creaBackup(context: Context, snapshot: BackupSnapshot): android.net.Uri {
         val root = JSONObject().apply {
             put("formato", "P&S Gestionale backup")
-            put("versione", 1)
+            put("versione", 2)
             put("generatoEpochMillis", System.currentTimeMillis())
             put("clienti", JSONArray().apply { snapshot.clienti.forEach { c ->
                 put(JSONObject().apply {

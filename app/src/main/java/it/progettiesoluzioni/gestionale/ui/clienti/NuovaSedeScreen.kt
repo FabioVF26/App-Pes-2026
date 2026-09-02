@@ -26,7 +26,7 @@ import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 
 @Composable
 fun NuovaSedeScreen(
-    clienteId: Long,
+    clienteId: String,
     viewModel: GestionaleViewModel,
     onSaved: () -> Unit
 ) {

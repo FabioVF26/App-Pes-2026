@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "attivita_scadenze",
@@ -11,8 +12,8 @@ import androidx.room.PrimaryKey
     indices = [Index("clienteId"), Index("scadenzaEpochMillis")]
 )
 data class AttivitaScadenza(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val clienteId: Long,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val clienteId: String,
     val servizio: String = "GENERALE",
     val titolo: String,
     val descrizione: String = "",

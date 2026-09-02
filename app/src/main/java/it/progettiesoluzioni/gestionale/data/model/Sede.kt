@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "sedi",
@@ -18,8 +19,8 @@ import androidx.room.PrimaryKey
     indices = [Index("clienteId")]
 )
 data class Sede(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val clienteId: Long,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val clienteId: String,
     val nome: String = "Sede principale",
     val indirizzo: String = "",
     val civico: String = "",

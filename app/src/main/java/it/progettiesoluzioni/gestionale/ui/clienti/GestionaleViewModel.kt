@@ -30,6 +30,10 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
     val documenti = repository.documenti.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
+        // Questo ViewModel viene creato solo dopo il login (vedi MainActivity), quindi
+        // e' il punto giusto per avviare l'ascolto realtime dei dati condivisi su Firestore.
+        repository.avviaSincronizzazione(viewModelScope)
+
         val prefs = application.getSharedPreferences("ps_gestionale_prefs", 0)
         val chiaveImport = "master_clienti_${MasterClientiSeed.versione}"
         if (!prefs.getBoolean(chiaveImport, false)) {
@@ -40,15 +44,14 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun cliente(id: Long) = repository.cliente(id)
-    fun sedi(clienteId: Long) = repository.sedi(clienteId)
-    fun sopralluogo(id: Long) = repository.sopralluogo(id)
-    fun sopralluoghiCliente(clienteId: Long) = repository.sopralluoghiCliente(clienteId)
-    fun verifiche(sopralluogoId: Long) = repository.verifiche(sopralluogoId)
-    fun nonConformita(sopralluogoId: Long) = repository.nonConformita(sopralluogoId)
-    fun attivitaCliente(clienteId: Long) = repository.attivitaCliente(clienteId)
-    fun documentiCliente(clienteId: Long) = repository.documentiCliente(clienteId)
-
+    fun cliente(id: String) = repository.cliente(id)
+    fun sedi(clienteId: String) = repository.sedi(clienteId)
+    fun sopralluogo(id: String) = repository.sopralluogo(id)
+    fun sopralluoghiCliente(clienteId: String) = repository.sopralluoghiCliente(clienteId)
+    fun verifiche(sopralluogoId: String) = repository.verifiche(sopralluogoId)
+    fun nonConformita(sopralluogoId: String) = repository.nonConformita(sopralluogoId)
+    fun attivitaCliente(clienteId: String) = repository.attivitaCliente(clienteId)
+    fun documentiCliente(clienteId: String) = repository.documentiCliente(clienteId)
 
     fun salvaAttivita(item: AttivitaScadenza, onSaved: () -> Unit = {}) {
         viewModelScope.launch { repository.inserisciAttivita(item); onSaved() }
@@ -112,13 +115,13 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun creaSopralluogoHaccp(clienteId: Long, sedeId: Long, note: String, onCreated: (Long) -> Unit) {
+    fun creaSopralluogoHaccp(clienteId: String, sedeId: String, note: String, onCreated: (String) -> Unit) {
         viewModelScope.launch {
             onCreated(repository.creaSopralluogoHaccp(clienteId, sedeId, note))
         }
     }
 
-    fun creaSopralluogoSicurezza(clienteId: Long, sedeId: Long, note: String, onCreated: (Long) -> Unit) {
+    fun creaSopralluogoSicurezza(clienteId: String, sedeId: String, note: String, onCreated: (String) -> Unit) {
         viewModelScope.launch {
             onCreated(repository.creaSopralluogoSicurezza(clienteId, sedeId, note))
         }
@@ -132,11 +135,11 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch { repository.salvaNonConformita(nonConformita) }
     }
 
-    fun rimuoviNonConformita(verificaId: Long) {
+    fun rimuoviNonConformita(verificaId: String) {
         viewModelScope.launch { repository.eliminaNonConformitaPerVerifica(verificaId) }
     }
 
-    fun eliminaSopralluogo(id: Long, onDone: () -> Unit = {}) {
+    fun eliminaSopralluogo(id: String, onDone: () -> Unit = {}) {
         viewModelScope.launch {
             repository.eliminaSopralluogo(id)
             onDone()

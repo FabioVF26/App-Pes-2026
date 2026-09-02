@@ -2,10 +2,11 @@ package it.progettiesoluzioni.gestionale.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "clienti")
 data class Cliente(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val ragioneSociale: String,
     val nomeCommerciale: String = "",
     val partitaIva: String = "",

@@ -48,7 +48,7 @@ fun SopralluoghiScreen(
     viewModel: GestionaleViewModel,
     onNuovoHaccp: () -> Unit,
     onNuovoSicurezza: () -> Unit,
-    onApri: (Long, String) -> Unit
+    onApri: (String, String) -> Unit
 ) {
     val sopralluoghi by viewModel.sopralluoghi.collectAsStateWithLifecycle()
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()

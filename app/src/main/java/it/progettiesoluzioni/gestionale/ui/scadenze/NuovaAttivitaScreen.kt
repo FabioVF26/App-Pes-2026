@@ -38,7 +38,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun NuovaAttivitaScreen(viewModel: GestionaleViewModel, clientePreselezionato: Long? = null, servizioPreselezionato: String = "GENERALE", onSaved: () -> Unit) {
+fun NuovaAttivitaScreen(viewModel: GestionaleViewModel, clientePreselezionato: String? = null, servizioPreselezionato: String = "GENERALE", onSaved: () -> Unit) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
     var cliente by remember { mutableStateOf<Cliente?>(null) }

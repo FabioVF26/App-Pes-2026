@@ -27,7 +27,7 @@ object NotificationHelper {
         }
     }
 
-    fun mostra(context: Context, scadenzaId: Long, giorni: Long, titolo: String, corpo: String) {
+    fun mostra(context: Context, scadenzaId: String, giorni: Long, titolo: String, corpo: String) {
         if (giaInviata(context, scadenzaId, giorni)) return
         creaCanale(context)
 
@@ -37,7 +37,7 @@ object NotificationHelper {
         }
         val pending = PendingIntent.getActivity(
             context,
-            (scadenzaId xor giorni).toInt(),
+            (scadenzaId.hashCode() * 31 + giorni.toInt()),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -52,15 +52,15 @@ object NotificationHelper {
             .build()
 
         if (Build.VERSION.SDK_INT < 33 || ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            NotificationManagerCompat.from(context).notify((scadenzaId * 10 + giorni.coerceAtLeast(0)).toInt(), notification)
+            NotificationManagerCompat.from(context).notify(scadenzaId.hashCode() * 31 + giorni.coerceAtLeast(0).toInt(), notification)
             segnaInviata(context, scadenzaId, giorni)
         }
     }
 
-    private fun key(scadenzaId: Long, giorni: Long) = "${scadenzaId}_$giorni"
-    private fun giaInviata(context: Context, scadenzaId: Long, giorni: Long): Boolean =
+    private fun key(scadenzaId: String, giorni: Long) = "${scadenzaId}_$giorni"
+    private fun giaInviata(context: Context, scadenzaId: String, giorni: Long): Boolean =
         context.getSharedPreferences("ps_scadenze_notifiche", Context.MODE_PRIVATE).getBoolean(key(scadenzaId, giorni), false)
-    private fun segnaInviata(context: Context, scadenzaId: Long, giorni: Long) {
+    private fun segnaInviata(context: Context, scadenzaId: String, giorni: Long) {
         context.getSharedPreferences("ps_scadenze_notifiche", Context.MODE_PRIVATE).edit().putBoolean(key(scadenzaId, giorni), true).apply()
     }
 }

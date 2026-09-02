@@ -44,7 +44,7 @@ import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
 fun ClientiScreen(
     viewModel: GestionaleViewModel,
     onNuovoCliente: () -> Unit,
-    onClienteClick: (Long) -> Unit
+    onClienteClick: (String) -> Unit
 ) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     var ricerca by remember { mutableStateOf("") }

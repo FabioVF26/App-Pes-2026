@@ -57,7 +57,7 @@ import java.util.Locale
 
 @Composable
 fun SopralluogoHaccpScreen(
-    sopralluogoId: Long,
+    sopralluogoId: String,
     viewModel: GestionaleViewModel,
     onBack: () -> Unit
 ) {
@@ -235,7 +235,7 @@ private fun VerificaCard(
     verificaReadOnly: Boolean,
     onAggiornaVerifica: (VerificaSopralluogo) -> Unit,
     onSalvaNc: (NonConformita) -> Unit,
-    onRimuoviNc: (Long) -> Unit
+    onRimuoviNc: (String) -> Unit
 ) {
     var espansa by rememberSaveable(verifica.id) { mutableStateOf(false) }
 
@@ -318,7 +318,7 @@ private fun EsitoChip(
 
 @Composable
 private fun NonConformitaEditor(
-    sopralluogoId: Long,
+    sopralluogoId: String,
     verifica: VerificaSopralluogo,
     valore: NonConformita?,
     readOnly: Boolean,

@@ -57,13 +57,13 @@ import java.util.Locale
 
 @Composable
 fun ClienteDettaglioScreen(
-    clienteId: Long,
+    clienteId: String,
     viewModel: GestionaleViewModel,
     onModificaCliente: () -> Unit,
     onAggiungiSede: () -> Unit,
     onNuovoSopralluogoHaccp: () -> Unit,
     onNuovoSopralluogoSicurezza: () -> Unit,
-    onApriSopralluogo: (Long, String) -> Unit,
+    onApriSopralluogo: (String, String) -> Unit,
     onApriServizio: (String) -> Unit
 ) {
     val cliente by viewModel.cliente(clienteId).collectAsStateWithLifecycle(initialValue = null)

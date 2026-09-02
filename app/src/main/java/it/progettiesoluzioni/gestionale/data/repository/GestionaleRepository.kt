@@ -9,45 +9,77 @@ import it.progettiesoluzioni.gestionale.data.model.NonConformita
 import it.progettiesoluzioni.gestionale.data.model.Sede
 import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
+import it.progettiesoluzioni.gestionale.sync.SyncManager
+import kotlinx.coroutines.CoroutineScope
 
 class GestionaleRepository(private val db: AppDatabase) {
+    private val sync = SyncManager(db)
+
     val clienti = db.clienteDao().osservaClienti()
     val numeroClienti = db.clienteDao().contaClientiAttivi()
     val attivitaScadenze = db.attivitaScadenzaDao().osservaTutte()
     val documenti = db.documentoClienteDao().osservaTutti()
 
-    fun cliente(id: Long) = db.clienteDao().osservaCliente(id)
-    fun sedi(clienteId: Long) = db.sedeDao().osservaSedi(clienteId)
+    /** Da chiamare una sola volta dopo il login per iniziare a ricevere i dati degli altri operatori. */
+    fun avviaSincronizzazione(scope: CoroutineScope) = sync.avviaAscoltoRealtime(scope)
+
+    fun cliente(id: String) = db.clienteDao().osservaCliente(id)
+    fun sedi(clienteId: String) = db.sedeDao().osservaSedi(clienteId)
     fun sopralluoghi() = db.sopralluogoDao().osservaTutti()
-    fun sopralluoghiCliente(clienteId: Long) = db.sopralluogoDao().osservaPerCliente(clienteId)
-    fun sopralluogo(id: Long) = db.sopralluogoDao().osserva(id)
-    fun verifiche(sopralluogoId: Long) = db.verificaSopralluogoDao().osservaPerSopralluogo(sopralluogoId)
-    fun nonConformita(sopralluogoId: Long) = db.nonConformitaDao().osservaPerSopralluogo(sopralluogoId)
-    fun attivitaCliente(clienteId: Long) = db.attivitaScadenzaDao().osservaPerCliente(clienteId)
-    fun documentiCliente(clienteId: Long) = db.documentoClienteDao().osservaPerCliente(clienteId)
+    fun sopralluoghiCliente(clienteId: String) = db.sopralluogoDao().osservaPerCliente(clienteId)
+    fun sopralluogo(id: String) = db.sopralluogoDao().osserva(id)
+    fun verifiche(sopralluogoId: String) = db.verificaSopralluogoDao().osservaPerSopralluogo(sopralluogoId)
+    fun nonConformita(sopralluogoId: String) = db.nonConformitaDao().osservaPerSopralluogo(sopralluogoId)
+    fun attivitaCliente(clienteId: String) = db.attivitaScadenzaDao().osservaPerCliente(clienteId)
+    fun documentiCliente(clienteId: String) = db.documentoClienteDao().osservaPerCliente(clienteId)
 
     suspend fun inserisciClienteConSede(cliente: Cliente, sede: Sede) {
+        val sedeConCliente = sede.copy(clienteId = cliente.id)
         db.withTransaction {
-            val clienteId = db.clienteDao().inserisci(cliente)
-            db.sedeDao().inserisci(sede.copy(clienteId = clienteId))
+            db.clienteDao().inserisci(cliente)
+            db.sedeDao().inserisci(sedeConCliente)
         }
+        sync.pushCliente(cliente)
+        sync.pushSede(sedeConCliente)
     }
 
-    suspend fun aggiornaCliente(cliente: Cliente) = db.clienteDao().aggiorna(cliente)
-    suspend fun archiviaCliente(cliente: Cliente) = db.clienteDao().aggiorna(cliente.copy(attivo = false))
-    suspend fun inserisciSede(sede: Sede) = db.sedeDao().inserisci(sede)
-    suspend fun aggiornaSede(sede: Sede) = db.sedeDao().aggiorna(sede)
-    suspend fun eliminaSede(sede: Sede) = db.sedeDao().elimina(sede)
+    suspend fun aggiornaCliente(cliente: Cliente) {
+        db.clienteDao().aggiorna(cliente)
+        sync.pushCliente(cliente)
+    }
 
-    suspend fun importaMasterClienti(): Pair<Int, Int> = db.withTransaction {
+    suspend fun archiviaCliente(cliente: Cliente) {
+        val aggiornato = cliente.copy(attivo = false)
+        db.clienteDao().aggiorna(aggiornato)
+        sync.pushCliente(aggiornato)
+    }
+
+    suspend fun inserisciSede(sede: Sede) {
+        db.sedeDao().inserisci(sede)
+        sync.pushSede(sede)
+    }
+
+    suspend fun aggiornaSede(sede: Sede) {
+        db.sedeDao().aggiorna(sede)
+        sync.pushSede(sede)
+    }
+
+    suspend fun eliminaSede(sede: Sede) {
+        db.sedeDao().elimina(sede)
+        sync.deleteSede(sede.id)
+    }
+
+    suspend fun importaMasterClienti(): Pair<Int, Int> {
         var clientiInseriti = 0
         var sediInserite = 0
+        val clientiDaSincronizzare = mutableListOf<Cliente>()
+        val sediDaSincronizzare = mutableListOf<Sede>()
 
-        MasterClientiSeed.clienti.forEach { seed ->
-            var clienteId = db.clienteDao().trovaIdPerRagioneSociale(seed.ragioneSociale)
-            if (clienteId == null) {
-                clienteId = db.clienteDao().inserisci(
-                    Cliente(
+        db.withTransaction {
+            MasterClientiSeed.clienti.forEach { seed ->
+                var clienteId = db.clienteDao().trovaIdPerRagioneSociale(seed.ragioneSociale)
+                if (clienteId == null) {
+                    val nuovo = Cliente(
                         ragioneSociale = seed.ragioneSociale,
                         attivita = seed.attivita,
                         legaleRappresentante = seed.referente,
@@ -57,51 +89,81 @@ class GestionaleRepository(private val db: AppDatabase) {
                         servizioSicurezza = seed.servizioSicurezza,
                         servizioGdpr = seed.servizioGdpr
                     )
-                )
-                clientiInseriti++
-            } else {
-                val esistente = db.clienteDao().clientePerId(clienteId)
-                if (esistente != null) {
-                    val aggiornato = esistente.copy(
-                        attivita = esistente.attivita.ifBlank { seed.attivita },
-                        legaleRappresentante = esistente.legaleRappresentante.ifBlank { seed.referente },
-                        telefono = esistente.telefono.ifBlank { seed.telefono },
-                        note = esistente.note.ifBlank { seed.note },
-                        servizioHaccp = esistente.servizioHaccp || seed.servizioHaccp,
-                        servizioSicurezza = esistente.servizioSicurezza || seed.servizioSicurezza,
-                        servizioGdpr = esistente.servizioGdpr || seed.servizioGdpr
-                    )
-                    if (aggiornato != esistente) db.clienteDao().aggiorna(aggiornato)
+                    db.clienteDao().inserisci(nuovo)
+                    clienteId = nuovo.id
+                    clientiDaSincronizzare += nuovo
+                    clientiInseriti++
+                } else {
+                    val esistente = db.clienteDao().clientePerId(clienteId)
+                    if (esistente != null) {
+                        val aggiornato = esistente.copy(
+                            attivita = esistente.attivita.ifBlank { seed.attivita },
+                            legaleRappresentante = esistente.legaleRappresentante.ifBlank { seed.referente },
+                            telefono = esistente.telefono.ifBlank { seed.telefono },
+                            note = esistente.note.ifBlank { seed.note },
+                            servizioHaccp = esistente.servizioHaccp || seed.servizioHaccp,
+                            servizioSicurezza = esistente.servizioSicurezza || seed.servizioSicurezza,
+                            servizioGdpr = esistente.servizioGdpr || seed.servizioGdpr
+                        )
+                        if (aggiornato != esistente) {
+                            db.clienteDao().aggiorna(aggiornato)
+                            clientiDaSincronizzare += aggiornato
+                        }
+                    }
                 }
-            }
 
-            seed.sedi.forEach { sedeSeed ->
-                val sedeEsistente = db.sedeDao().trovaIdPerIndirizzo(clienteId, sedeSeed.indirizzo)
-                if (sedeEsistente == null) {
-                    db.sedeDao().inserisci(
-                        Sede(
+                seed.sedi.forEach { sedeSeed ->
+                    val sedeEsistente = db.sedeDao().trovaIdPerIndirizzo(clienteId!!, sedeSeed.indirizzo)
+                    if (sedeEsistente == null) {
+                        val nuovaSede = Sede(
                             clienteId = clienteId,
                             nome = sedeSeed.nome,
                             indirizzo = sedeSeed.indirizzo,
                             note = if (sedeSeed.zona.isBlank()) "" else "Zona: ${sedeSeed.zona}",
                             principale = sedeSeed.principale
                         )
-                    )
-                    sediInserite++
+                        db.sedeDao().inserisci(nuovaSede)
+                        sediDaSincronizzare += nuovaSede
+                        sediInserite++
+                    }
                 }
             }
         }
-        clientiInseriti to sediInserite
+
+        clientiDaSincronizzare.forEach { sync.pushCliente(it) }
+        sediDaSincronizzare.forEach { sync.pushSede(it) }
+        return clientiInseriti to sediInserite
     }
 
+    suspend fun inserisciAttivita(item: AttivitaScadenza) {
+        db.attivitaScadenzaDao().inserisci(item)
+        sync.pushAttivita(item)
+    }
 
-    suspend fun inserisciAttivita(item: AttivitaScadenza) = db.attivitaScadenzaDao().inserisci(item)
-    suspend fun aggiornaAttivita(item: AttivitaScadenza) = db.attivitaScadenzaDao().aggiorna(item)
-    suspend fun eliminaAttivita(item: AttivitaScadenza) = db.attivitaScadenzaDao().elimina(item)
+    suspend fun aggiornaAttivita(item: AttivitaScadenza) {
+        db.attivitaScadenzaDao().aggiorna(item)
+        sync.pushAttivita(item)
+    }
 
-    suspend fun inserisciDocumento(item: DocumentoCliente) = db.documentoClienteDao().inserisci(item)
-    suspend fun aggiornaDocumento(item: DocumentoCliente) = db.documentoClienteDao().aggiorna(item)
-    suspend fun eliminaDocumento(item: DocumentoCliente) = db.documentoClienteDao().elimina(item)
+    suspend fun eliminaAttivita(item: AttivitaScadenza) {
+        db.attivitaScadenzaDao().elimina(item)
+        sync.deleteAttivita(item.id)
+    }
+
+    suspend fun inserisciDocumento(item: DocumentoCliente) {
+        db.documentoClienteDao().inserisci(item)
+        sync.pushDocumento(item)
+    }
+
+    suspend fun aggiornaDocumento(item: DocumentoCliente) {
+        db.documentoClienteDao().aggiorna(item)
+        sync.pushDocumento(item)
+    }
+
+    suspend fun eliminaDocumento(item: DocumentoCliente) {
+        db.documentoClienteDao().elimina(item)
+        sync.deleteDocumento(item.id)
+    }
 
     suspend fun backupSnapshot(): BackupSnapshot = BackupSnapshot(
         clienti = db.clienteDao().tuttiSnapshot(),
@@ -113,93 +175,120 @@ class GestionaleRepository(private val db: AppDatabase) {
         nonConformita = db.nonConformitaDao().tutteSnapshot()
     )
 
-    suspend fun ripristinaBackup(snapshot: BackupSnapshot) = db.withTransaction {
-        // Cancellazione in ordine inverso rispetto alle dipendenze FK.
-        db.nonConformitaDao().eliminaTutte()
-        db.verificaSopralluogoDao().eliminaTutte()
-        db.sopralluogoDao().eliminaTutti()
-        db.documentoClienteDao().eliminaTutti()
-        db.attivitaScadenzaDao().eliminaTutte()
-        db.sedeDao().eliminaTutte()
-        db.clienteDao().eliminaTutti()
+    suspend fun ripristinaBackup(snapshot: BackupSnapshot) {
+        db.withTransaction {
+            // Cancellazione in ordine inverso rispetto alle dipendenze FK.
+            db.nonConformitaDao().eliminaTutte()
+            db.verificaSopralluogoDao().eliminaTutte()
+            db.sopralluogoDao().eliminaTutti()
+            db.documentoClienteDao().eliminaTutti()
+            db.attivitaScadenzaDao().eliminaTutte()
+            db.sedeDao().eliminaTutte()
+            db.clienteDao().eliminaTutti()
 
-        // Ripristino mantenendo gli ID originali per conservare tutte le relazioni.
-        if (snapshot.clienti.isNotEmpty()) db.clienteDao().inserisciTutti(snapshot.clienti)
-        if (snapshot.sedi.isNotEmpty()) db.sedeDao().inserisciTutte(snapshot.sedi)
-        if (snapshot.attivita.isNotEmpty()) db.attivitaScadenzaDao().inserisciTutte(snapshot.attivita)
-        if (snapshot.documenti.isNotEmpty()) db.documentoClienteDao().inserisciTutti(snapshot.documenti)
-        if (snapshot.sopralluoghi.isNotEmpty()) db.sopralluogoDao().inserisciTutti(snapshot.sopralluoghi)
-        if (snapshot.verifiche.isNotEmpty()) db.verificaSopralluogoDao().inserisciTutte(snapshot.verifiche)
-        if (snapshot.nonConformita.isNotEmpty()) db.nonConformitaDao().inserisciTutte(snapshot.nonConformita)
+            // Ripristino mantenendo gli ID originali per conservare tutte le relazioni.
+            if (snapshot.clienti.isNotEmpty()) db.clienteDao().inserisciTutti(snapshot.clienti)
+            if (snapshot.sedi.isNotEmpty()) db.sedeDao().inserisciTutte(snapshot.sedi)
+            if (snapshot.attivita.isNotEmpty()) db.attivitaScadenzaDao().inserisciTutte(snapshot.attivita)
+            if (snapshot.documenti.isNotEmpty()) db.documentoClienteDao().inserisciTutti(snapshot.documenti)
+            if (snapshot.sopralluoghi.isNotEmpty()) db.sopralluogoDao().inserisciTutti(snapshot.sopralluoghi)
+            if (snapshot.verifiche.isNotEmpty()) db.verificaSopralluogoDao().inserisciTutte(snapshot.verifiche)
+            if (snapshot.nonConformita.isNotEmpty()) db.nonConformitaDao().inserisciTutte(snapshot.nonConformita)
+        }
+        // Il backup ripristinato va anche riportato su Firestore, cosi' resta condiviso con gli altri dispositivi.
+        snapshot.clienti.forEach { sync.pushCliente(it) }
+        snapshot.sedi.forEach { sync.pushSede(it) }
+        snapshot.attivita.forEach { sync.pushAttivita(it) }
+        snapshot.documenti.forEach { sync.pushDocumento(it) }
+        snapshot.sopralluoghi.forEach { sync.pushSopralluogo(it) }
+        snapshot.verifiche.forEach { sync.pushVerifica(it) }
+        snapshot.nonConformita.forEach { sync.pushNonConformita(it) }
     }
 
-    suspend fun creaSopralluogoHaccp(clienteId: Long, sedeId: Long, note: String): Long = db.withTransaction {
-        val id = db.sopralluogoDao().inserisci(
-            Sopralluogo(
-                clienteId = clienteId,
-                sedeId = sedeId,
-                tipoServizio = "HACCP",
-                dataOraEpochMillis = System.currentTimeMillis(),
-                stato = "BOZZA",
-                noteGenerali = note
+    suspend fun creaSopralluogoHaccp(clienteId: String, sedeId: String, note: String): String {
+        val sopralluogo = Sopralluogo(
+            clienteId = clienteId,
+            sedeId = sedeId,
+            tipoServizio = "HACCP",
+            dataOraEpochMillis = System.currentTimeMillis(),
+            stato = "BOZZA",
+            noteGenerali = note
+        )
+        val verifiche = HaccpChecklist.voci.mapIndexed { index, voce ->
+            VerificaSopralluogo(
+                sopralluogoId = sopralluogo.id,
+                codice = voce.codice,
+                sezione = voce.sezione,
+                titolo = voce.titolo,
+                riferimentoNormativo = voce.riferimento,
+                ordine = index
             )
-        )
-        db.verificaSopralluogoDao().inserisciTutte(
-            HaccpChecklist.voci.mapIndexed { index, voce ->
-                VerificaSopralluogo(
-                    sopralluogoId = id,
-                    codice = voce.codice,
-                    sezione = voce.sezione,
-                    titolo = voce.titolo,
-                    riferimentoNormativo = voce.riferimento,
-                    ordine = index
-                )
-            }
-        )
-        id
+        }
+        db.withTransaction {
+            db.sopralluogoDao().inserisci(sopralluogo)
+            db.verificaSopralluogoDao().inserisciTutte(verifiche)
+        }
+        sync.pushSopralluogo(sopralluogo)
+        verifiche.forEach { sync.pushVerifica(it) }
+        return sopralluogo.id
     }
 
-
-    suspend fun creaSopralluogoSicurezza(clienteId: Long, sedeId: Long, note: String): Long = db.withTransaction {
-        val id = db.sopralluogoDao().inserisci(
-            Sopralluogo(
-                clienteId = clienteId,
-                sedeId = sedeId,
-                tipoServizio = "SICUREZZA",
-                dataOraEpochMillis = System.currentTimeMillis(),
-                stato = "BOZZA",
-                noteGenerali = note
+    suspend fun creaSopralluogoSicurezza(clienteId: String, sedeId: String, note: String): String {
+        val sopralluogo = Sopralluogo(
+            clienteId = clienteId,
+            sedeId = sedeId,
+            tipoServizio = "SICUREZZA",
+            dataOraEpochMillis = System.currentTimeMillis(),
+            stato = "BOZZA",
+            noteGenerali = note
+        )
+        val verifiche = SicurezzaChecklist.voci.mapIndexed { index, voce ->
+            VerificaSopralluogo(
+                sopralluogoId = sopralluogo.id,
+                codice = voce.codice,
+                sezione = voce.sezione,
+                titolo = voce.titolo,
+                riferimentoNormativo = voce.riferimento,
+                ordine = index
             )
-        )
-        db.verificaSopralluogoDao().inserisciTutte(
-            SicurezzaChecklist.voci.mapIndexed { index, voce ->
-                VerificaSopralluogo(
-                    sopralluogoId = id,
-                    codice = voce.codice,
-                    sezione = voce.sezione,
-                    titolo = voce.titolo,
-                    riferimentoNormativo = voce.riferimento,
-                    ordine = index
-                )
-            }
-        )
-        id
+        }
+        db.withTransaction {
+            db.sopralluogoDao().inserisci(sopralluogo)
+            db.verificaSopralluogoDao().inserisciTutte(verifiche)
+        }
+        sync.pushSopralluogo(sopralluogo)
+        verifiche.forEach { sync.pushVerifica(it) }
+        return sopralluogo.id
     }
 
-    suspend fun aggiornaVerifica(verifica: VerificaSopralluogo) = db.verificaSopralluogoDao().aggiorna(verifica)
+    suspend fun aggiornaVerifica(verifica: VerificaSopralluogo) {
+        db.verificaSopralluogoDao().aggiorna(verifica)
+        sync.pushVerifica(verifica)
+    }
 
     suspend fun salvaNonConformita(nonConformita: NonConformita) {
         val esistente = db.nonConformitaDao().perVerifica(nonConformita.verificaId)
-        if (esistente == null) db.nonConformitaDao().inserisci(nonConformita)
-        else db.nonConformitaDao().aggiorna(nonConformita.copy(id = esistente.id))
+        val daSalvare = if (esistente == null) nonConformita else nonConformita.copy(id = esistente.id)
+        if (esistente == null) db.nonConformitaDao().inserisci(daSalvare)
+        else db.nonConformitaDao().aggiorna(daSalvare)
+        sync.pushNonConformita(daSalvare)
     }
 
-    suspend fun eliminaNonConformitaPerVerifica(verificaId: Long) = db.nonConformitaDao().eliminaPerVerifica(verificaId)
+    suspend fun eliminaNonConformitaPerVerifica(verificaId: String) {
+        val esistente = db.nonConformitaDao().perVerifica(verificaId)
+        db.nonConformitaDao().eliminaPerVerifica(verificaId)
+        if (esistente != null) sync.deleteNonConformitaPerId(esistente.id)
+    }
 
-    suspend fun eliminaSopralluogo(id: Long) = db.sopralluogoDao().eliminaPerId(id)
+    suspend fun eliminaSopralluogo(id: String) {
+        db.sopralluogoDao().eliminaPerId(id)
+        sync.deleteSopralluogo(id)
+    }
 
     suspend fun chiudiSopralluogo(sopralluogo: Sopralluogo): Boolean {
-        db.sopralluogoDao().aggiorna(sopralluogo.copy(stato = "CHIUSO"))
+        val aggiornato = sopralluogo.copy(stato = "CHIUSO")
+        db.sopralluogoDao().aggiorna(aggiornato)
+        sync.pushSopralluogo(aggiornato)
         return true
     }
 }
@@ -233,7 +322,6 @@ object HaccpChecklist {
     )
 }
 
-
 object SicurezzaChecklist {
     val voci = listOf(
         ChecklistVoce("S01", "Documentazione e organizzazione", "Documento di valutazione dei rischi presente, coerente con attività, mansioni e rischi effettivi e aggiornato quando necessario", "D.Lgs. 81/2008, artt. 17, 28 e 29"),
@@ -265,7 +353,6 @@ object SicurezzaChecklist {
         ChecklistVoce("S27", "Segnaletica e comportamenti", "Istruzioni, procedure e comportamenti osservati risultano coerenti con le misure previste nel DVR", "D.Lgs. 81/2008, artt. 18, 19 e 20")
     )
 }
-
 
 data class BackupSnapshot(
     val clienti: List<Cliente>,

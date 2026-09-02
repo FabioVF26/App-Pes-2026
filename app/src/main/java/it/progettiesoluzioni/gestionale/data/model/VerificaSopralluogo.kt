@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "verifiche_sopralluogo",
@@ -18,8 +19,8 @@ import androidx.room.PrimaryKey
     indices = [Index("sopralluogoId")]
 )
 data class VerificaSopralluogo(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val sopralluogoId: Long,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val sopralluogoId: String,
     val codice: String,
     val sezione: String,
     val titolo: String,

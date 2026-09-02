@@ -3,6 +3,7 @@ package it.progettiesoluzioni.gestionale.data.database
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.Sede
@@ -11,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SedeDao {
     @Insert
-    suspend fun inserisci(sede: Sede): Long
+    suspend fun inserisci(sede: Sede)
 
     @Update
     suspend fun aggiorna(sede: Sede)
@@ -19,11 +20,14 @@ interface SedeDao {
     @Delete
     suspend fun elimina(sede: Sede)
 
+    @Query("DELETE FROM sedi WHERE id = :id")
+    suspend fun eliminaPerId(id: String)
+
     @Query("SELECT * FROM sedi WHERE clienteId = :clienteId ORDER BY principale DESC, nome ASC")
-    fun osservaSedi(clienteId: Long): Flow<List<Sede>>
+    fun osservaSedi(clienteId: String): Flow<List<Sede>>
 
     @Query("SELECT id FROM sedi WHERE clienteId = :clienteId AND indirizzo = :indirizzo COLLATE NOCASE LIMIT 1")
-    suspend fun trovaIdPerIndirizzo(clienteId: Long, indirizzo: String): Long?
+    suspend fun trovaIdPerIndirizzo(clienteId: String, indirizzo: String): String?
 
     @Query("SELECT * FROM sedi ORDER BY clienteId, principale DESC, nome")
     suspend fun tutteSnapshot(): List<Sede>
@@ -33,4 +37,7 @@ interface SedeDao {
 
     @Query("DELETE FROM sedi")
     suspend fun eliminaTutte()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertDaSync(sede: Sede)
 }

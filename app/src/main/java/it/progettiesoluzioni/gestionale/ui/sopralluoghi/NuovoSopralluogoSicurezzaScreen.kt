@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,17 +38,17 @@ import it.progettiesoluzioni.gestionale.ui.theme.BrandNavy
 @Composable
 fun NuovoSopralluogoSicurezzaScreen(
     viewModel: GestionaleViewModel,
-    clientePreselezionato: Long? = null,
-    onCreated: (Long) -> Unit
+    clientePreselezionato: String? = null,
+    onCreated: (String) -> Unit
 ) {
     val clienti by viewModel.clienti.collectAsStateWithLifecycle()
     val clientiServizio = remember(clienti) { clienti.filter { it.servizioSicurezza } }
-    var clienteId by rememberSaveable { mutableLongStateOf(clientePreselezionato ?: 0L) }
+    var clienteId by rememberSaveable { mutableStateOf(clientePreselezionato ?: "") }
     var ricerca by rememberSaveable { mutableStateOf("") }
     var mostraRicerca by rememberSaveable { mutableStateOf(clientePreselezionato == null) }
     val clienteSelezionato = clienti.firstOrNull { it.id == clienteId }
     val sedi by viewModel.sedi(clienteId).collectAsStateWithLifecycle(initialValue = emptyList())
-    var sedeId by rememberSaveable { mutableLongStateOf(0L) }
+    var sedeId by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
 
@@ -65,12 +64,12 @@ fun NuovoSopralluogoSicurezzaScreen(
 
     LaunchedEffect(clienteId, sedi) {
         if (sedi.none { it.id == sedeId }) {
-            sedeId = sedi.firstOrNull { it.principale }?.id ?: sedi.firstOrNull()?.id ?: 0L
+            sedeId = sedi.firstOrNull { it.principale }?.id ?: sedi.firstOrNull()?.id ?: ""
         }
     }
 
     LaunchedEffect(clienteId) {
-        if (clienteId > 0) {
+        if (clienteId.isNotEmpty()) {
             mostraRicerca = false
             ricerca = ""
             listState.animateScrollToItem(0)
@@ -85,7 +84,7 @@ fun NuovoSopralluogoSicurezzaScreen(
         item {
             Text("Nuovo sopralluogo Sicurezza", style = MaterialTheme.typography.headlineSmall, color = BrandNavy)
             Text(
-                if (clienteId > 0) "Cliente selezionato. Scegli la sede e avvia subito il sopralluogo."
+                if (clienteId.isNotEmpty()) "Cliente selezionato. Scegli la sede e avvia subito il sopralluogo."
                 else "Cerca il cliente per ragione sociale e selezionalo.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -108,8 +107,8 @@ fun NuovoSopralluogoSicurezzaScreen(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 mostraRicerca = true
-                                clienteId = 0L
-                                sedeId = 0L
+                                clienteId = ""
+                                sedeId = ""
                             }
                         ) { Text("Cambia cliente") }
                     }
@@ -154,7 +153,7 @@ fun NuovoSopralluogoSicurezzaScreen(
             }
         }
 
-        if (clienteId > 0) {
+        if (clienteId.isNotEmpty()) {
             item { Text("Sede operativa", style = MaterialTheme.typography.titleMedium, color = BrandNavy) }
             if (sedi.isEmpty()) {
                 item { Text("Il cliente non ha sedi disponibili.", color = MaterialTheme.colorScheme.error) }
@@ -184,7 +183,7 @@ fun NuovoSopralluogoSicurezzaScreen(
             item {
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = sedeId > 0,
+                    enabled = sedeId.isNotEmpty(),
                     onClick = { viewModel.creaSopralluogoSicurezza(clienteId, sedeId, note, onCreated) }
                 ) {
                     Text("Avvia sopralluogo Sicurezza")

@@ -39,7 +39,7 @@ import it.progettiesoluzioni.gestionale.ui.theme.SafetyOrange
 
 @Composable
 fun ModificaClienteScreen(
-    clienteId: Long,
+    clienteId: String,
     viewModel: GestionaleViewModel,
     onSaved: () -> Unit,
     onArchived: () -> Unit

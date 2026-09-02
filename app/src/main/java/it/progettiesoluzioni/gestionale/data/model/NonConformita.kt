@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "non_conformita",
@@ -25,9 +26,9 @@ import androidx.room.PrimaryKey
     indices = [Index("sopralluogoId"), Index("verificaId")]
 )
 data class NonConformita(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val sopralluogoId: Long,
-    val verificaId: Long,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val sopralluogoId: String,
+    val verificaId: String,
     val descrizione: String = "",
     val azioneRichiesta: String = "",
     @ColumnInfo(defaultValue = "''") val sanzionePossibile: String = "",
