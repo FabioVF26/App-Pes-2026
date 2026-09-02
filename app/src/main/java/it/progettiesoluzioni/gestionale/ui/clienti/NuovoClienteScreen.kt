@@ -142,7 +142,7 @@ fun NuovoClienteScreen(
                             servizioGdpr = gdpr
                         ),
                         Sede(
-                            clienteId = 0,
+                            clienteId = "",
                             nome = nomeSede.ifBlank { "Sede principale" }.trim(),
                             indirizzo = indirizzo.trim(),
                             civico = civico.trim(),

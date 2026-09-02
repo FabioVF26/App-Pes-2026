@@ -343,7 +343,7 @@ private fun NonConformitaEditor(
     fun salva() {
         onSave(
             NonConformita(
-                id = valore?.id ?: 0,
+                id = valore?.id ?: java.util.UUID.randomUUID().toString(),
                 sopralluogoId = sopralluogoId,
                 verificaId = verifica.id,
                 descrizione = descrizione,
