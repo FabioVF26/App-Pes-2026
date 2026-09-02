@@ -13,7 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 
 /**
  * Punto unico di accesso alla sincronizzazione con Firestore. Il repository
- * chiama i metodi push*/delete* dopo ogni scrittura locale; [avviaAscoltoRealtime]
+ * chiama i metodi push/delete dopo ogni scrittura locale; [avviaAscoltoRealtime]
  * va invocato una sola volta dopo il login per iniziare a ricevere le
  * modifiche fatte dagli altri dispositivi/operatori.
  */

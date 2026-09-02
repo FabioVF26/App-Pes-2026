@@ -66,7 +66,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                         codiceAteco, attivita, legaleRappresentante, telefono, email, pec, note,
                         servizioHaccp, servizioSicurezza, servizioGdpr, attivo)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(
+                    arrayOf<Any?>(
                         newId, c.string("ragioneSociale"), c.string("nomeCommerciale"), c.string("partitaIva"),
                         c.string("codiceFiscale"), c.string("codiceAteco"), c.string("attivita"),
                         c.string("legaleRappresentante"), c.string("telefono"), c.string("email"),
@@ -103,7 +103,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 db.execSQL(
                     """INSERT INTO sedi_v7 (id, clienteId, nome, indirizzo, civico, cap, comune, provincia, note, principale)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(
+                    arrayOf<Any?>(
                         newId, nuovoClienteId, c.string("nome"), c.string("indirizzo"), c.string("civico"),
                         c.string("cap"), c.string("comune"), c.string("provincia"), c.string("note"), c.int("principale")
                     )
@@ -138,7 +138,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 db.execSQL(
                     """INSERT INTO sopralluoghi_v7 (id, clienteId, sedeId, tipoServizio, dataOraEpochMillis, stato, noteGenerali)
                         VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(newId, nuovoClienteId, nuovaSedeId, c.string("tipoServizio"), c.long("dataOraEpochMillis"), c.string("stato"), c.string("noteGenerali"))
+                    arrayOf<Any?>(newId, nuovoClienteId, nuovaSedeId, c.string("tipoServizio"), c.long("dataOraEpochMillis"), c.string("stato"), c.string("noteGenerali"))
                 )
             }
         }
@@ -170,7 +170,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 db.execSQL(
                     """INSERT INTO verifiche_sopralluogo_v7 (id, sopralluogoId, codice, sezione, titolo, riferimentoNormativo, esito, note, ordine)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(newId, nuovoSopralluogoId, c.string("codice"), c.string("sezione"), c.string("titolo"), c.string("riferimentoNormativo"), c.string("esito"), c.string("note"), c.int("ordine"))
+                    arrayOf<Any?>(newId, nuovoSopralluogoId, c.string("codice"), c.string("sezione"), c.string("titolo"), c.string("riferimentoNormativo"), c.string("esito"), c.string("note"), c.int("ordine"))
                 )
             }
         }
@@ -208,7 +208,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                         sanzionePossibile, priorita, stato, termineEpochMillis, fotoUri, fotoRisoluzioneUri,
                         verificaEfficacia, noteVerifica, dataRisoluzioneEpochMillis, dataChiusuraEpochMillis)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(
+                    arrayOf<Any?>(
                         newId, nuovoSopralluogoId, nuovaVerificaId, c.string("descrizione"), c.string("azioneRichiesta"),
                         c.stringOrNull("sanzionePossibile") ?: "", c.string("priorita"), c.string("stato"),
                         c.longOrNull("termineEpochMillis"), c.string("fotoUri"), c.stringOrNull("fotoRisoluzioneUri") ?: "",
@@ -246,7 +246,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                     """INSERT INTO attivita_scadenze_v7 (id, clienteId, servizio, titolo, descrizione, priorita, stato,
                         scadenzaEpochMillis, promemoriaAttivo, creataEpochMillis, completataEpochMillis)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(
+                    arrayOf<Any?>(
                         newId, nuovoClienteId, c.string("servizio"), c.string("titolo"), c.string("descrizione"),
                         c.string("priorita"), c.string("stato"), c.longOrNull("scadenzaEpochMillis"),
                         c.int("promemoriaAttivo"), c.long("creataEpochMillis"), c.longOrNull("completataEpochMillis")
@@ -285,7 +285,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                     """INSERT INTO documenti_cliente_v7 (id, clienteId, sedeId, servizio, categoria, titolo, uri,
                         dataDocumentoEpochMillis, scadenzaEpochMillis, note, creatoEpochMillis)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(
+                    arrayOf<Any?>(
                         newId, nuovoClienteId, nuovaSedeId, c.string("servizio"), c.string("categoria"),
                         c.string("titolo"), c.string("uri"), c.longOrNull("dataDocumentoEpochMillis"),
                         c.longOrNull("scadenzaEpochMillis"), c.string("note"), c.long("creatoEpochMillis")
