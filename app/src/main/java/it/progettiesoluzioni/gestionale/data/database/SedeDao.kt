@@ -3,7 +3,7 @@ package it.progettiesoluzioni.gestionale.data.database
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.Sede
@@ -38,6 +38,6 @@ interface SedeDao {
     @Query("DELETE FROM sedi")
     suspend fun eliminaTutte()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertDaSync(sede: Sede)
 }

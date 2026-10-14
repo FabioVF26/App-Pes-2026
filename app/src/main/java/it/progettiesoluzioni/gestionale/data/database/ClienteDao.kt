@@ -3,7 +3,7 @@ package it.progettiesoluzioni.gestionale.data.database
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.Cliente
@@ -47,6 +47,6 @@ interface ClienteDao {
     @Query("DELETE FROM clienti")
     suspend fun eliminaTutti()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertDaSync(cliente: Cliente)
 }

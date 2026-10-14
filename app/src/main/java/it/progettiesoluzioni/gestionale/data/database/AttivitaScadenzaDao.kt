@@ -3,7 +3,7 @@ package it.progettiesoluzioni.gestionale.data.database
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.AttivitaScadenza
@@ -26,6 +26,6 @@ interface AttivitaScadenzaDao {
     @Insert suspend fun inserisciTutte(items: List<AttivitaScadenza>)
     @Query("DELETE FROM attivita_scadenze") suspend fun eliminaTutte()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertDaSync(attivitaScadenza: AttivitaScadenza)
 }

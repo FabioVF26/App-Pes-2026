@@ -65,7 +65,23 @@ class GestionaleRepository(private val db: AppDatabase) {
     }
 
     suspend fun eliminaSede(sede: Sede) {
+        // Prima di cancellare in locale (dove le relazioni a cascata eliminano i figli) raccolgo cio' che
+        // va rimosso o aggiornato anche su Firestore, altrimenti sul cloud resterebbero documenti orfani.
+        val sopralluoghiCollegati = db.sopralluogoDao().idPerSede(sede.id)
+        val figliPerSopralluogo = sopralluoghiCollegati.map { id ->
+            Triple(id, db.verificaSopralluogoDao().idPerSopralluogo(id), db.nonConformitaDao().idPerSopralluogo(id))
+        }
+        val documentiCollegati = db.documentoClienteDao().perSede(sede.id)
+
         db.sedeDao().elimina(sede)
+
+        figliPerSopralluogo.forEach { (sopralluogoId, idVerifiche, idNc) ->
+            idNc.forEach { sync.deleteNonConformitaPerId(it) }
+            idVerifiche.forEach { sync.deleteVerifica(it) }
+            sync.deleteSopralluogo(sopralluogoId)
+        }
+        // I documenti non vengono eliminati: restano senza sede (ON DELETE SET NULL).
+        documentiCollegati.forEach { sync.pushDocumento(it.copy(sedeId = null)) }
         sync.deleteSede(sede.id)
     }
 
@@ -281,7 +297,14 @@ class GestionaleRepository(private val db: AppDatabase) {
     }
 
     suspend fun eliminaSopralluogo(id: String) {
+        // Verifiche e non conformita' vengono eliminate in locale a cascata: vanno rimosse anche da Firestore.
+        val idVerifiche = db.verificaSopralluogoDao().idPerSopralluogo(id)
+        val idNc = db.nonConformitaDao().idPerSopralluogo(id)
+
         db.sopralluogoDao().eliminaPerId(id)
+
+        idNc.forEach { sync.deleteNonConformitaPerId(it) }
+        idVerifiche.forEach { sync.deleteVerifica(it) }
         sync.deleteSopralluogo(id)
     }
 

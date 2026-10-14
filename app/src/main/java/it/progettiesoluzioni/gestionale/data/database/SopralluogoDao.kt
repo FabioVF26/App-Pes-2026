@@ -2,7 +2,7 @@ package it.progettiesoluzioni.gestionale.data.database
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
@@ -31,6 +31,9 @@ interface SopralluogoDao {
     @Query("DELETE FROM sopralluoghi WHERE id = :id")
     suspend fun eliminaPerId(id: String)
 
+    @Query("SELECT id FROM sopralluoghi WHERE sedeId = :sedeId")
+    suspend fun idPerSede(sedeId: String): List<String>
+
     @Query("SELECT * FROM sopralluoghi ORDER BY dataOraEpochMillis DESC")
     suspend fun tuttiSnapshot(): List<Sopralluogo>
 
@@ -40,6 +43,6 @@ interface SopralluogoDao {
     @Query("DELETE FROM sopralluoghi")
     suspend fun eliminaTutti()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertDaSync(sopralluogo: Sopralluogo)
 }

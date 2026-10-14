@@ -2,7 +2,7 @@ package it.progettiesoluzioni.gestionale.data.database
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
@@ -31,6 +31,9 @@ interface VerificaSopralluogoDao {
     @Query("DELETE FROM verifiche_sopralluogo WHERE id = :id")
     suspend fun eliminaPerId(id: String)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Query("SELECT id FROM verifiche_sopralluogo WHERE sopralluogoId = :sopralluogoId")
+    suspend fun idPerSopralluogo(sopralluogoId: String): List<String>
+
+    @Upsert
     suspend fun upsertDaSync(verificaSopralluogo: VerificaSopralluogo)
 }

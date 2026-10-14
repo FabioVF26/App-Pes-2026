@@ -13,16 +13,16 @@ private const val TAG = "FirestoreSync"
  *
  * - [push] scrive una modifica locale su Firestore (l'SDK di Firestore mette
  *   in coda automaticamente la scrittura se il dispositivo e' offline, e la
- *   invia da solo appena torna la connessione: non serve gestirlo a mano).
- * - [delete] rimuove il documento da Firestore quando l'elemento viene
- *   eliminato localmente.
- * - [avviaAscolto] mette in piedi un listener realtime: ogni volta che un
- *   altro dispositivo aggiunge, modifica o elimina un elemento, la modifica
- *   viene applicata anche al database Room locale.
+ *   invia da solo appena torna la connessione).
+ * - [delete] rimuove il documento da Firestore.
+ * - [avviaAscolto] mette in piedi un listener realtime: ogni modifica fatta da
+ *   altri dispositivi viene applicata al database Room locale.
  *
- * Le scritture ancora "in sospeso" (metadata.hasPendingWrites) generate da
- * questo stesso dispositivo vengono ignorate nel listener, per evitare di
- * riscrivere su Room un dato identico a quello appena salvato localmente.
+ * Le modifiche in arrivo non vengono mai applicate direttamente: passano da
+ * [applica], che le protegge da errori (un documento problematico non deve mai
+ * far chiudere l'app) e, se manca l'elemento padre, le riprova piu' tardi.
+ * Le scritture ancora "in sospeso" generate da questo stesso dispositivo
+ * vengono ignorate, perche' sono gia' presenti in Room.
  */
 class FirestoreSyncEngine<T>(
     private val collectionName: String,
@@ -31,7 +31,9 @@ class FirestoreSyncEngine<T>(
     private val fromMap: (String, Map<String, Any?>) -> T,
     private val getId: (T) -> String,
     private val upsertLocale: suspend (T) -> Unit,
-    private val eliminaLocalePerId: suspend (String) -> Unit
+    private val eliminaLocalePerId: suspend (String) -> Unit,
+    private val applica: suspend (String, suspend () -> Unit) -> Unit,
+    private val fineLotto: suspend () -> Unit
 ) {
     fun push(entity: T) {
         firestore.collection(collectionName)
@@ -56,22 +58,29 @@ class FirestoreSyncEngine<T>(
                 }
                 if (snapshot == null) return@addSnapshotListener
 
-                for (change in snapshot.documentChanges) {
-                    // Ignora l'eco della scrittura appena effettuata da questo stesso dispositivo:
-                    // e' gia' presente in Room, riscriverla sarebbe ridondante.
-                    if (change.document.metadata.hasPendingWrites()) continue
+                val modifiche = snapshot.documentChanges.filter { !it.document.metadata.hasPendingWrites() }
+                if (modifiche.isEmpty()) return@addSnapshotListener
 
-                    scope.launch {
+                // Un'unica coroutine per lotto: le modifiche della collezione vengono applicate in ordine.
+                scope.launch {
+                    for (change in modifiche) {
+                        val id = change.document.id
                         when (change.type) {
                             DocumentChange.Type.ADDED, DocumentChange.Type.MODIFIED -> {
-                                val data = change.document.data ?: emptyMap()
-                                upsertLocale(fromMap(change.document.id, data))
+                                val entity = try {
+                                    fromMap(id, change.document.data ?: emptyMap())
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Documento non leggibile $collectionName/$id", e)
+                                    null
+                                }
+                                if (entity != null) applica("$collectionName/$id") { upsertLocale(entity) }
                             }
                             DocumentChange.Type.REMOVED -> {
-                                eliminaLocalePerId(change.document.id)
+                                applica("$collectionName/$id (rimozione)") { eliminaLocalePerId(id) }
                             }
                         }
                     }
+                    fineLotto()
                 }
             }
     }

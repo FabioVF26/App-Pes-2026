@@ -2,7 +2,7 @@ package it.progettiesoluzioni.gestionale.data.database
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.Update
 import it.progettiesoluzioni.gestionale.data.model.NonConformita
@@ -28,6 +28,9 @@ interface NonConformitaDao {
     @Query("DELETE FROM non_conformita WHERE id = :id")
     suspend fun eliminaPerId(id: String)
 
+    @Query("SELECT id FROM non_conformita WHERE sopralluogoId = :sopralluogoId")
+    suspend fun idPerSopralluogo(sopralluogoId: String): List<String>
+
     @Query("SELECT * FROM non_conformita ORDER BY sopralluogoId, id")
     suspend fun tutteSnapshot(): List<NonConformita>
 
@@ -37,6 +40,6 @@ interface NonConformitaDao {
     @Query("DELETE FROM non_conformita")
     suspend fun eliminaTutte()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertDaSync(nonConformita: NonConformita)
 }
