@@ -68,6 +68,10 @@ fun SopralluogoHaccpScreen(
     var mostraConfermaChiusura by remember { mutableStateOf(false) }
     var mostraConfermaEliminazione by remember { mutableStateOf(false) }
 
+    // Sezioni della checklist attualmente aperte (tutte chiuse all'inizio); sopravvive alla rotazione.
+    var sezioniAperte by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) }
+    val nomiSezioni = verifiche.map { it.sezione }.distinct()
+
     val ncMap = nonConformita.associateBy { it.verificaId }
     val complete = verifiche.count { it.esito != "DA_VERIFICARE" }
     val daVerificare = verifiche.count { it.esito == "DA_VERIFICARE" }
@@ -107,19 +111,42 @@ fun SopralluogoHaccpScreen(
             }
         }
 
+        item(key = "controllo-sezioni") {
+            ControlloEspandiTutto(
+                tutteAperte = nomiSezioni.isNotEmpty() && nomiSezioni.all { it in sezioniAperte },
+                onToggle = {
+                    sezioniAperte = if (nomiSezioni.all { it in sezioniAperte }) emptySet() else nomiSezioni.toSet()
+                }
+            )
+        }
+
         verifiche.groupBy { it.sezione }.forEach { (sezione, gruppo) ->
+            val aperta = sezione in sezioniAperte
             item(key = "sec-$sezione") {
-                Text(sezione, style = MaterialTheme.typography.titleLarge, color = BrandNavy)
-            }
-            items(gruppo, key = { it.id }) { verifica ->
-                VerificaCard(
-                    verifica = verifica,
-                    nonConformita = ncMap[verifica.id],
-                    verificaReadOnly = sopralluogoChiuso,
-                    onAggiornaVerifica = viewModel::aggiornaVerifica,
-                    onSalvaNc = viewModel::salvaNonConformita,
-                    onRimuoviNc = viewModel::rimuoviNonConformita
+                IntestazioneSezione(
+                    titolo = sezione,
+                    totale = gruppo.size,
+                    completate = gruppo.count { it.esito != "DA_VERIFICARE" },
+                    nonConformi = gruppo.count { it.esito == "NON_CONFORME" },
+                    espansa = aperta,
+                    coloreAccento = HaccpGreen,
+                    coloreContenitore = HaccpContainer,
+                    onToggle = {
+                        sezioniAperte = if (aperta) sezioniAperte - sezione else sezioniAperte + sezione
+                    }
                 )
+            }
+            if (aperta) {
+                items(gruppo, key = { it.id }) { verifica ->
+                    VerificaCard(
+                        verifica = verifica,
+                        nonConformita = ncMap[verifica.id],
+                        verificaReadOnly = sopralluogoChiuso,
+                        onAggiornaVerifica = viewModel::aggiornaVerifica,
+                        onSalvaNc = viewModel::salvaNonConformita,
+                        onRimuoviNc = viewModel::rimuoviNonConformita
+                    )
+                }
             }
         }
 
