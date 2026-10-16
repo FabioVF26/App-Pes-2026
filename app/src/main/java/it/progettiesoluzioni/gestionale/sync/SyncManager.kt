@@ -11,6 +11,8 @@ import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import android.util.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,15 +29,20 @@ private const val MAX_TENTATIVI = 50
  */
 class SyncManager(db: AppDatabase, firestore: FirebaseFirestore = FirebaseFirestore.getInstance()) {
 
+    private val primoSnapshotClienti = CompletableDeferred<Unit>()
+    private val primoSnapshotSedi = CompletableDeferred<Unit>()
+
     private val clienti = FirestoreSyncEngine<Cliente>(
         Collezioni.CLIENTI, firestore, Cliente::toFirestoreMap, { id, data -> data.toCliente(id) },
         { it.id }, db.clienteDao()::upsertDaSync, db.clienteDao()::eliminaPerId,
-        this::applicaProtetto, this::riprovaInAttesa
+        this::applicaProtetto, this::riprovaInAttesa,
+        { primoSnapshotClienti.complete(Unit) }
     )
     private val sedi = FirestoreSyncEngine<Sede>(
         Collezioni.SEDI, firestore, Sede::toFirestoreMap, { id, data -> data.toSede(id) },
         { it.id }, db.sedeDao()::upsertDaSync, db.sedeDao()::eliminaPerId,
-        this::applicaProtetto, this::riprovaInAttesa
+        this::applicaProtetto, this::riprovaInAttesa,
+        { primoSnapshotSedi.complete(Unit) }
     )
     private val sopralluoghi = FirestoreSyncEngine<Sopralluogo>(
         Collezioni.SOPRALLUOGHI, firestore, Sopralluogo::toFirestoreMap, { id, data -> data.toSopralluogo(id) },
@@ -123,6 +130,17 @@ class SyncManager(db: AppDatabase, firestore: FirebaseFirestore = FirebaseFirest
     fun deleteAttivita(id: String) = attivitaScadenze.delete(id)
     fun pushDocumento(item: DocumentoCliente) = documentiCliente.push(item)
     fun deleteDocumento(id: String) = documentiCliente.delete(id)
+
+    /**
+     * Attende che clienti e sedi del cloud siano stati scaricati almeno una volta dal server.
+     * Restituisce false se non succede entro il timeout (ad esempio senza connessione).
+     */
+    suspend fun attendiPrimaSincronizzazione(timeoutMs: Long): Boolean =
+        withTimeoutOrNull(timeoutMs) {
+            primoSnapshotClienti.await()
+            primoSnapshotSedi.await()
+            true
+        } ?: false
 
     private var ascoltoAvviato = false
 

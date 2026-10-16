@@ -15,6 +15,7 @@ import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import it.progettiesoluzioni.gestionale.data.repository.GestionaleRepository
 import it.progettiesoluzioni.gestionale.data.repository.MasterClientiSeed
+import it.progettiesoluzioni.gestionale.data.repository.RisultatoUnione
 import it.progettiesoluzioni.gestionale.util.BackupImporter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -38,8 +39,13 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
         val chiaveImport = "master_clienti_${MasterClientiSeed.versione}"
         if (!prefs.getBoolean(chiaveImport, false)) {
             viewModelScope.launch {
-                repository.importaMasterClienti()
-                prefs.edit().putBoolean(chiaveImport, true).apply()
+                // La lista master si importa solo dopo aver scaricato i dati gia' presenti nel cloud:
+                // altrimenti un dispositivo ancora vuoto ricreerebbe aziende che esistono gia'.
+                // Se non c'e' connessione l'importazione viene semplicemente rimandata al prossimo avvio.
+                if (repository.attendiPrimaSincronizzazione(20_000)) {
+                    repository.importaMasterClienti()
+                    prefs.edit().putBoolean(chiaveImport, true).apply()
+                }
             }
         }
     }
@@ -85,6 +91,14 @@ class GestionaleViewModel(application: Application) : AndroidViewModel(applicati
             }
             onResult(result)
         }
+    }
+
+    fun contaDuplicati(onResult: (Int) -> Unit) {
+        viewModelScope.launch { onResult(repository.contaDuplicati()) }
+    }
+
+    fun unisciDuplicati(onResult: (Result<RisultatoUnione>) -> Unit) {
+        viewModelScope.launch { onResult(runCatching { repository.unisciDuplicati() }) }
     }
 
     fun salvaCliente(cliente: Cliente, sede: Sede, onSaved: () -> Unit) {

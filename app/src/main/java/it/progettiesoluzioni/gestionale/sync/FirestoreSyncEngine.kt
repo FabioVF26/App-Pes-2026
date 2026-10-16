@@ -33,8 +33,11 @@ class FirestoreSyncEngine<T>(
     private val upsertLocale: suspend (T) -> Unit,
     private val eliminaLocalePerId: suspend (String) -> Unit,
     private val applica: suspend (String, suspend () -> Unit) -> Unit,
-    private val fineLotto: suspend () -> Unit
+    private val fineLotto: suspend () -> Unit,
+    private val alPrimoSnapshotDalServer: () -> Unit = {}
 ) {
+    private var primoSnapshotServerNotificato = false
+
     fun push(entity: T) {
         firestore.collection(collectionName)
             .document(getId(entity))
@@ -58,8 +61,8 @@ class FirestoreSyncEngine<T>(
                 }
                 if (snapshot == null) return@addSnapshotListener
 
+                val daServer = !snapshot.metadata.isFromCache
                 val modifiche = snapshot.documentChanges.filter { !it.document.metadata.hasPendingWrites() }
-                if (modifiche.isEmpty()) return@addSnapshotListener
 
                 // Un'unica coroutine per lotto: le modifiche della collezione vengono applicate in ordine.
                 scope.launch {
@@ -80,7 +83,12 @@ class FirestoreSyncEngine<T>(
                             }
                         }
                     }
-                    fineLotto()
+                    if (modifiche.isNotEmpty()) fineLotto()
+                    // Primo allineamento con il server completato: i dati del cloud sono ora in Room.
+                    if (daServer && !primoSnapshotServerNotificato) {
+                        primoSnapshotServerNotificato = true
+                        alPrimoSnapshotDalServer()
+                    }
                 }
             }
     }

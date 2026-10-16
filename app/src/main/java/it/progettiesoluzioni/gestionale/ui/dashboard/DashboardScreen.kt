@@ -72,6 +72,9 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
     var messaggioBackup by remember { mutableStateOf<String?>(null) }
     var ripristinoInCorso by remember { mutableStateOf(false) }
     var promemoriaDismissed by remember { mutableStateOf(false) }
+    var duplicatiTrovati by remember { mutableStateOf<Int?>(null) }
+    var unioneInCorso by remember { mutableStateOf(false) }
+    var messaggioUnione by remember { mutableStateOf<String?>(null) }
 
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) backupDaRipristinare = uri
@@ -142,6 +145,37 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
         )
     }
 
+    duplicatiTrovati?.let { n ->
+        AlertDialog(
+            onDismissRequest = { if (!unioneInCorso) duplicatiTrovati = null },
+            title = { Text("Unire le aziende duplicate?") },
+            text = {
+                Text(
+                    "Sono state trovate $n aziende duplicate (stessa ragione sociale). Per ciascuna ne viene tenuta una sola: " +
+                        "sedi, sopralluoghi, scadenze e documenti delle copie vengono spostati su quella tenuta e i campi vuoti " +
+                        "vengono completati con i dati delle copie. La modifica si propaga anche agli altri dispositivi. " +
+                        "Conviene esportare prima un backup."
+                )
+            },
+            confirmButton = {
+                TextButton(enabled = !unioneInCorso, onClick = {
+                    unioneInCorso = true
+                    viewModel.unisciDuplicati { risultato ->
+                        unioneInCorso = false
+                        duplicatiTrovati = null
+                        messaggioUnione = risultato.fold(
+                            onSuccess = { "Unite ${it.clientiUniti} aziende duplicate (${it.sediUnite} sedi duplicate accorpate)." },
+                            onFailure = { "Unione non riuscita: ${it.message ?: "errore sconosciuto"}" }
+                        )
+                    }
+                }) { Text(if (unioneInCorso) "Unione..." else "Unisci") }
+            },
+            dismissButton = {
+                TextButton(enabled = !unioneInCorso, onClick = { duplicatiTrovati = null }) { Text("Annulla") }
+            }
+        )
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Surface(modifier = Modifier.fillMaxWidth(), color = BrandNavy, shape = RoundedCornerShape(24.dp), shadowElevation = 3.dp) {
@@ -150,7 +184,7 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
                         Text("P&S Gestionale", style = MaterialTheme.typography.headlineMedium, color = Color.White)
                         Spacer(Modifier.height(4.dp))
                         Text("HACCP • Sicurezza • GDPR", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
-                        Text("v0.12.2", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
+                        Text("v0.12.3", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.68f), modifier = Modifier.padding(top = 6.dp))
                     }
                     androidx.compose.material3.IconButton(onClick = onLogout) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Esci", tint = Color.White.copy(alpha = 0.85f))
@@ -208,6 +242,21 @@ fun DashboardScreen(viewModel: GestionaleViewModel, onApriScadenze: () -> Unit =
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        item { Text("Manutenzione dati", style = MaterialTheme.typography.titleLarge, color = BrandNavy) }
+        item {
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !unioneInCorso, onClick = {
+                viewModel.contaDuplicati { n ->
+                    if (n == 0) messaggioUnione = "Nessuna azienda duplicata trovata." else duplicatiTrovati = n
+                }
+            }) { Text("Cerca e unisci aziende duplicate") }
+        }
+        messaggioUnione?.let { msg ->
+            item {
+                Surface(color = if (msg.startsWith("Unione non riuscita")) Color(0xFFFFE8E8) else Color(0xFFEAF5EA), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Text(msg, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
         }
     }
 }

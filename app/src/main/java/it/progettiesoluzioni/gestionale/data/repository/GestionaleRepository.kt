@@ -11,6 +11,8 @@ import it.progettiesoluzioni.gestionale.data.model.Sopralluogo
 import it.progettiesoluzioni.gestionale.data.model.VerificaSopralluogo
 import it.progettiesoluzioni.gestionale.sync.SyncManager
 import kotlinx.coroutines.CoroutineScope
+import java.util.Locale
+import java.util.UUID
 
 class GestionaleRepository(private val db: AppDatabase) {
     private val sync = SyncManager(db)
@@ -22,6 +24,18 @@ class GestionaleRepository(private val db: AppDatabase) {
 
     /** Da chiamare una sola volta dopo il login per iniziare a ricevere i dati degli altri operatori. */
     fun avviaSincronizzazione(scope: CoroutineScope) = sync.avviaAscoltoRealtime(scope)
+
+    suspend fun attendiPrimaSincronizzazione(timeoutMs: Long): Boolean = sync.attendiPrimaSincronizzazione(timeoutMs)
+
+    private fun normalizza(testo: String): String =
+        testo.trim().lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
+
+    /** ID fisso derivato dal nome: la stessa azienda della lista master ha lo stesso ID su ogni dispositivo. */
+    private fun idClienteSeed(ragioneSociale: String): String =
+        UUID.nameUUIDFromBytes("cliente|${normalizza(ragioneSociale)}".toByteArray(Charsets.UTF_8)).toString()
+
+    private fun idSedeSeed(clienteId: String, indirizzo: String): String =
+        UUID.nameUUIDFromBytes("sede|$clienteId|${normalizza(indirizzo)}".toByteArray(Charsets.UTF_8)).toString()
 
     fun cliente(id: String) = db.clienteDao().osservaCliente(id)
     fun sedi(clienteId: String) = db.sedeDao().osservaSedi(clienteId)
@@ -93,9 +107,12 @@ class GestionaleRepository(private val db: AppDatabase) {
 
         db.withTransaction {
             MasterClientiSeed.clienti.forEach { seed ->
-                var clienteId = db.clienteDao().trovaIdPerRagioneSociale(seed.ragioneSociale)
+                val idSeed = idClienteSeed(seed.ragioneSociale)
+                var clienteId = db.clienteDao().clientePerId(idSeed)?.id
+                    ?: db.clienteDao().trovaIdPerRagioneSociale(seed.ragioneSociale)
                 if (clienteId == null) {
                     val nuovo = Cliente(
+                        id = idSeed,
                         ragioneSociale = seed.ragioneSociale,
                         attivita = seed.attivita,
                         legaleRappresentante = seed.referente,
@@ -130,8 +147,10 @@ class GestionaleRepository(private val db: AppDatabase) {
 
                 seed.sedi.forEach { sedeSeed ->
                     val sedeEsistente = db.sedeDao().trovaIdPerIndirizzo(clienteId!!, sedeSeed.indirizzo)
-                    if (sedeEsistente == null) {
+                    val idSede = idSedeSeed(clienteId, sedeSeed.indirizzo)
+                    if (sedeEsistente == null && db.sedeDao().perId(idSede) == null) {
                         val nuovaSede = Sede(
+                            id = idSede,
                             clienteId = clienteId,
                             nome = sedeSeed.nome,
                             indirizzo = sedeSeed.indirizzo,
@@ -149,6 +168,125 @@ class GestionaleRepository(private val db: AppDatabase) {
         clientiDaSincronizzare.forEach { sync.pushCliente(it) }
         sediDaSincronizzare.forEach { sync.pushSede(it) }
         return clientiInseriti to sediInserite
+    }
+
+    // --- Unione delle aziende duplicate -----------------------------------------------------
+
+    private fun gruppiDuplicati(clienti: List<Cliente>): List<List<Cliente>> =
+        clienti.groupBy { normalizza(it.ragioneSociale) }
+            .values
+            .filter { it.size > 1 }
+            .map { gruppo -> gruppo.sortedBy { it.id } } // ordine stabile: ogni dispositivo sceglie la stessa azienda da tenere
+
+    private fun chiaveSede(sede: Sede): String =
+        if (sede.indirizzo.isBlank()) "nome:${normalizza(sede.nome)}"
+        else "${normalizza(sede.indirizzo)}|${normalizza(sede.civico)}"
+
+    /** Numero di aziende "in piu'" (stessa ragione sociale) presenti nell'archivio. */
+    suspend fun contaDuplicati(): Int =
+        gruppiDuplicati(db.clienteDao().tuttiSnapshot()).sumOf { it.size - 1 }
+
+    /**
+     * Per ogni gruppo di aziende con la stessa ragione sociale ne tiene una e sposta su di essa sedi,
+     * sopralluoghi, scadenze e documenti delle altre; completa i campi vuoti con i dati delle copie.
+     * Le modifiche vengono poi inviate a Firestore: prima gli aggiornamenti, per ultime le cancellazioni.
+     */
+    suspend fun unisciDuplicati(): RisultatoUnione {
+        val gruppi = gruppiDuplicati(db.clienteDao().tuttiSnapshot())
+        if (gruppi.isEmpty()) return RisultatoUnione(0, 0)
+
+        val sedi = db.sedeDao().tutteSnapshot()
+        val sopralluoghi = db.sopralluogoDao().tuttiSnapshot()
+        val attivita = db.attivitaScadenzaDao().tutteSnapshot()
+        val documenti = db.documentoClienteDao().tuttiSnapshot()
+
+        val clientiAggiornati = mutableListOf<Cliente>()
+        val sediSpostate = mutableListOf<Sede>()
+        val sopralluoghiAggiornati = mutableListOf<Sopralluogo>()
+        val attivitaAggiornate = mutableListOf<AttivitaScadenza>()
+        val documentiAggiornati = mutableListOf<DocumentoCliente>()
+        val sediDaEliminare = mutableListOf<String>()
+        val clientiDaEliminare = mutableListOf<String>()
+
+        gruppi.forEach { gruppo ->
+            val principale = gruppo.first()
+            val duplicati = gruppo.drop(1)
+
+            val unito = duplicati.fold(principale) { acc, d ->
+                acc.copy(
+                    nomeCommerciale = acc.nomeCommerciale.ifBlank { d.nomeCommerciale },
+                    partitaIva = acc.partitaIva.ifBlank { d.partitaIva },
+                    codiceFiscale = acc.codiceFiscale.ifBlank { d.codiceFiscale },
+                    codiceAteco = acc.codiceAteco.ifBlank { d.codiceAteco },
+                    attivita = acc.attivita.ifBlank { d.attivita },
+                    legaleRappresentante = acc.legaleRappresentante.ifBlank { d.legaleRappresentante },
+                    telefono = acc.telefono.ifBlank { d.telefono },
+                    email = acc.email.ifBlank { d.email },
+                    pec = acc.pec.ifBlank { d.pec },
+                    note = acc.note.ifBlank { d.note },
+                    servizioHaccp = acc.servizioHaccp || d.servizioHaccp,
+                    servizioSicurezza = acc.servizioSicurezza || d.servizioSicurezza,
+                    servizioGdpr = acc.servizioGdpr || d.servizioGdpr,
+                    attivo = acc.attivo || d.attivo
+                )
+            }
+            if (unito != principale) clientiAggiornati += unito
+
+            val sediFinali = sedi.filter { it.clienteId == principale.id }
+                .associateBy { chiaveSede(it) }
+                .toMutableMap()
+
+            duplicati.forEach { d ->
+                // Sede duplicata -> sede da tenere: serve per riagganciare sopralluoghi e documenti.
+                val sedeDaTenere = HashMap<String, String>()
+                sedi.filter { it.clienteId == d.id }.forEach { sede ->
+                    val corrispondente = sediFinali[chiaveSede(sede)]
+                    if (corrispondente != null) {
+                        sedeDaTenere[sede.id] = corrispondente.id
+                        sediDaEliminare += sede.id
+                    } else {
+                        val spostata = sede.copy(clienteId = principale.id)
+                        sediFinali[chiaveSede(spostata)] = spostata
+                        sediSpostate += spostata
+                    }
+                }
+                sopralluoghi.filter { it.clienteId == d.id }.forEach {
+                    sopralluoghiAggiornati += it.copy(clienteId = principale.id, sedeId = sedeDaTenere[it.sedeId] ?: it.sedeId)
+                }
+                attivita.filter { it.clienteId == d.id }.forEach {
+                    attivitaAggiornate += it.copy(clienteId = principale.id)
+                }
+                documenti.filter { it.clienteId == d.id }.forEach {
+                    documentiAggiornati += it.copy(
+                        clienteId = principale.id,
+                        sedeId = it.sedeId?.let { sedeId -> sedeDaTenere[sedeId] ?: sedeId }
+                    )
+                }
+                clientiDaEliminare += d.id
+            }
+        }
+
+        // Prima si spostano tutti gli elementi collegati, poi si cancellano le copie: cosi' la cancellazione
+        // a cascata non porta via nulla.
+        db.withTransaction {
+            clientiAggiornati.forEach { db.clienteDao().aggiorna(it) }
+            sediSpostate.forEach { db.sedeDao().aggiorna(it) }
+            sopralluoghiAggiornati.forEach { db.sopralluogoDao().aggiorna(it) }
+            attivitaAggiornate.forEach { db.attivitaScadenzaDao().aggiorna(it) }
+            documentiAggiornati.forEach { db.documentoClienteDao().aggiorna(it) }
+            sediDaEliminare.forEach { db.sedeDao().eliminaPerId(it) }
+            clientiDaEliminare.forEach { db.clienteDao().eliminaPerId(it) }
+        }
+
+        clientiAggiornati.forEach { sync.pushCliente(it) }
+        sediSpostate.forEach { sync.pushSede(it) }
+        sopralluoghiAggiornati.forEach { sync.pushSopralluogo(it) }
+        attivitaAggiornate.forEach { sync.pushAttivita(it) }
+        documentiAggiornati.forEach { sync.pushDocumento(it) }
+        sediDaEliminare.forEach { sync.deleteSede(it) }
+        clientiDaEliminare.forEach { sync.deleteCliente(it) }
+
+        return RisultatoUnione(clientiDaEliminare.size, sediDaEliminare.size)
     }
 
     suspend fun inserisciAttivita(item: AttivitaScadenza) {
@@ -315,6 +453,8 @@ class GestionaleRepository(private val db: AppDatabase) {
         return true
     }
 }
+
+data class RisultatoUnione(val clientiUniti: Int, val sediUnite: Int)
 
 data class ChecklistVoce(val codice: String, val sezione: String, val titolo: String, val riferimento: String)
 

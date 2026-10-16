@@ -23,6 +23,9 @@ interface SedeDao {
     @Query("DELETE FROM sedi WHERE id = :id")
     suspend fun eliminaPerId(id: String)
 
+    @Query("SELECT * FROM sedi WHERE id = :id LIMIT 1")
+    suspend fun perId(id: String): Sede?
+
     @Query("SELECT * FROM sedi WHERE clienteId = :clienteId ORDER BY principale DESC, nome ASC")
     fun osservaSedi(clienteId: String): Flow<List<Sede>>
 
